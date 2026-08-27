@@ -1,0 +1,16 @@
+{
+  "name": "@tincan-webmcp/demo-saas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "build": "vue-tsc --noEmit && vite build",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@tincan-webmcp/browser": "workspace:*",
+    "@tincan-webmcp/webmcp": "workspace:*",
+    "vue": "3.5.41"
+  }
+}

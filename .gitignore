@@ -1,0 +1,48 @@
+# Dependencies and package-manager caches
+node_modules/
+.bun/
+
+# Build and test output
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log
+
+# Local environment and runtime configuration
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+*.local
+
+# Credentials, signing material, and local data
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+credentials*.json
+service-account*.json
+secrets*.json
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor, operating-system, and temporary files
+.DS_Store
+.idea/
+.vscode/
+.claude/
+.codex/
+.cache/
+.vite/
+tmp/
+temp/
+*.swp
+*.swo

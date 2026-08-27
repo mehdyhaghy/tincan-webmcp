@@ -1,0 +1,9 @@
+{
+  "name": "@tincan-webmcp/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@tincan-webmcp/server": "workspace:*"
+  }
+}

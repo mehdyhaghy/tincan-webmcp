@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/otel" },
+    { "path": "packages/browser" },
+    { "path": "packages/webmcp" },
+    { "path": "packages/server" },
+    { "path": "apps/api" }
+  ]
+}
