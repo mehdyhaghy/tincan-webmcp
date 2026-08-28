@@ -17,7 +17,6 @@ export interface ReportSiteIssueInput {
   expected?: string;
   observed?: string;
   operation?: string;
-  confidence?: number;
 }
 
 export type DiagnosticEvent = OtelLogRecord;

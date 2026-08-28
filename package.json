@@ -10,12 +10,11 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "$npm_execpath run --parallel dev:api dev:demo dev:issues",
+    "dev": "$npm_execpath run --parallel dev:api dev:web",
     "dev:api": "$npm_execpath --watch apps/api/src/index.ts",
-    "dev:demo": "vite --host 127.0.0.1 --port 5173 apps/demo-saas",
-    "dev:issues": "vite --host 127.0.0.1 --port 5174 apps/issues-ui",
-    "build": "tsc -b && vue-tsc --noEmit -p apps/demo-saas/tsconfig.json && vue-tsc --noEmit -p apps/issues-ui/tsconfig.json && vite build apps/demo-saas && vite build apps/issues-ui",
-    "typecheck": "tsc -b && vue-tsc --noEmit -p apps/demo-saas/tsconfig.json && vue-tsc --noEmit -p apps/issues-ui/tsconfig.json",
+    "dev:web": "vite --host 127.0.0.1 --port 5173 apps/demo-saas",
+    "build": "tsc -b && vue-tsc --noEmit -p apps/demo-saas/tsconfig.json && vite build apps/demo-saas",
+    "typecheck": "tsc -b && vue-tsc --noEmit -p apps/demo-saas/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

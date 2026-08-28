@@ -8,8 +8,7 @@ This Bun workspace follows the requirements in `spec.md`; the original PDF is re
 - `packages/webmcp`: the public `report_site_issue` adapter and visible browser tool registration.
 - `packages/server`: validation, re-sanitization, rate limiting, and persistence hooks.
 - `packages/otel`: OTLP-aligned log, metric, trace, resource, and scope types.
-- `apps/demo-saas`: the Vue/Vite subscription demo.
-- `apps/issues-ui`: the developer-facing issue details UI.
+- `apps/demo-saas`: the single Vue/Vite application, including the user site, browser agent, and admin issue routes.
 - `apps/api`: the Bun reference API and in-memory demo state.
 - Place unit tests beside source as `*.test.ts`; keep browser journeys in `tests/e2e/*.spec.ts`. Store static app assets under each app's `public/` directory.
 

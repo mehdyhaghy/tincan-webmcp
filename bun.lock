@@ -5,14 +5,14 @@
     "": {
       "name": "tincan-webmcp",
       "devDependencies": {
-        "@playwright/test": "latest",
-        "@types/bun": "latest",
-        "@vitejs/plugin-vue": "latest",
-        "@vue/tsconfig": "latest",
+        "@playwright/test": "1.62.1",
+        "@types/bun": "1.4.0",
+        "@vitejs/plugin-vue": "6.0.8",
+        "@vue/tsconfig": "0.9.1",
         "typescript": "6.0.3",
-        "vite": "latest",
-        "vitest": "latest",
-        "vue-tsc": "latest",
+        "vite": "8.2.2",
+        "vitest": "4.1.11",
+        "vue-tsc": "3.3.11",
       },
     },
     "apps/api": {
@@ -23,20 +23,12 @@
       },
     },
     "apps/demo-saas": {
-      "name": "@tincan-webmcp/demo-saas",
+      "name": "@tincan-webmcp/web",
       "version": "0.1.0",
       "dependencies": {
         "@tincan-webmcp/browser": "workspace:*",
         "@tincan-webmcp/webmcp": "workspace:*",
-        "vue": "latest",
-      },
-    },
-    "apps/issues-ui": {
-      "name": "@tincan-webmcp/issues-ui",
-      "version": "0.1.0",
-      "dependencies": {
-        "@tincan-webmcp/browser": "workspace:*",
-        "vue": "latest",
+        "vue": "3.5.41",
       },
     },
     "packages/browser": {
@@ -118,13 +110,11 @@
 
     "@tincan-webmcp/browser": ["@tincan-webmcp/browser@workspace:packages/browser"],
 
-    "@tincan-webmcp/demo-saas": ["@tincan-webmcp/demo-saas@workspace:apps/demo-saas"],
-
-    "@tincan-webmcp/issues-ui": ["@tincan-webmcp/issues-ui@workspace:apps/issues-ui"],
-
     "@tincan-webmcp/otel": ["@tincan-webmcp/otel@workspace:packages/otel"],
 
     "@tincan-webmcp/server": ["@tincan-webmcp/server@workspace:packages/server"],
+
+    "@tincan-webmcp/web": ["@tincan-webmcp/web@workspace:apps/demo-saas"],
 
     "@tincan-webmcp/webmcp": ["@tincan-webmcp/webmcp@workspace:packages/webmcp"],
 

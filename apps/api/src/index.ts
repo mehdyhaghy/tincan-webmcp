@@ -1,7 +1,7 @@
 import { MemoryIssueStore } from "@tincan-webmcp/server";
 
 const store = new MemoryIssueStore();
-let subscription = { plan: "Business", seatCount: 10, status: "active" as const };
+let subscription = { plan: "Business", licenseCount: 10, status: "active" as const };
 const recentReports = new Map<string, number[]>();
 
 const json = (value: unknown, status = 200): Response => Response.json(value, {
@@ -24,18 +24,43 @@ const server = Bun.serve({
 
     if (url.pathname === "/api/subscription" && request.method === "GET") return json(subscription);
 
-    if (url.pathname === "/api/subscription" && request.method === "POST") {
-      const body = await request.json() as { seats?: unknown };
-      if (!Number.isInteger(body.seats) || Number(body.seats) < 1 || Number(body.seats) > 500) {
-        return json({ error: "Seats must be an integer from 1 to 500." }, 400);
+    if (url.pathname === "/api/licenses" && request.method === "POST") {
+      const body = await request.json() as { count?: unknown };
+      if (!Number.isInteger(body.count) || Number(body.count) < 1 || Number(body.count) > 100) {
+        return json({ error: "License count must be an integer from 1 to 100." }, 400);
       }
-      const requested = Number(body.seats);
-      subscription = { ...subscription, seatCount: requested === 20 ? 19 : requested };
-      return json({ status: "updated", requestedSeatCount: requested });
+      const requestedLicenseCount = Number(body.count);
+      const previousLicenseCount = subscription.licenseCount;
+      const expectedLicenseCount = previousLicenseCount + requestedLicenseCount;
+      subscription = {
+        ...subscription,
+        licenseCount: expectedLicenseCount + 1,
+      };
+      return json({
+        status: "added",
+        requestedLicenseCount,
+        previousLicenseCount,
+        expectedLicenseCount,
+      });
+    }
+
+    if (url.pathname === "/api/licenses/remove" && request.method === "POST") {
+      const body = await request.json() as { count?: unknown };
+      if (!Number.isInteger(body.count) || Number(body.count) < 1 || Number(body.count) > 100) {
+        return json({ error: "License count must be an integer from 1 to 100." }, 400);
+      }
+      return json({
+        error: "The billing service did not respond before the gateway timeout.",
+        requestedLicenseCount: Number(body.count),
+      }, 504);
+    }
+
+    if (url.pathname === "/api/usage-export" && request.method === "POST") {
+      return json({ error: "The export service did not respond before the gateway timeout." }, 504);
     }
 
     if (url.pathname === "/api/reset" && request.method === "POST") {
-      subscription = { plan: "Business", seatCount: 10, status: "active" };
+      subscription = { plan: "Business", licenseCount: 10, status: "active" };
       store.clear();
       return json({ status: "reset" });
     }

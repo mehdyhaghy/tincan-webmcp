@@ -12,6 +12,16 @@ declare global {
 
   interface ModelContext {
     registerTool(tool: ModelContextTool, options?: { signal?: AbortSignal }): Promise<void>;
+    getTools(options?: { fromOrigins?: string[] }): Promise<RegisteredModelContextTool[]>;
+    executeTool(tool: RegisteredModelContextTool, inputArguments?: string, options?: { signal?: AbortSignal }): Promise<string>;
+  }
+
+  interface RegisteredModelContextTool {
+    name: string;
+    title?: string;
+    description: string;
+    inputSchema: string;
+    annotations?: { readOnlyHint?: boolean; untrustedContentHint?: boolean };
   }
 
   interface Document {

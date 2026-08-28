@@ -33,7 +33,6 @@ export function validateIncident(input: unknown): asserts input is IncidentPaylo
   if ((issue.description?.length ?? 0) > 2_000 || (issue.expected?.length ?? 0) > 1_000 || (issue.observed?.length ?? 0) > 1_000) {
     throw new TypeError("Issue field exceeds its limit");
   }
-  if (issue.confidence !== undefined && (issue.confidence < 0 || issue.confidence > 1)) throw new TypeError("Invalid confidence");
   if (!Array.isArray(payload.diagnostics?.resourceLogs)) throw new TypeError("OTLP resource logs are required");
   if (!Array.isArray(payload.diagnostics?.resourceMetrics)) throw new TypeError("OTLP resource metrics are required");
   if (!Array.isArray(payload.diagnostics?.resourceSpans)) throw new TypeError("OTLP resource spans are required");

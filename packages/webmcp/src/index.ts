@@ -1,4 +1,4 @@
-import type { ReportSiteIssueInput, TinCanRecorder } from "@tincan-webmcp/browser";
+import type { ReportResult, ReportSiteIssueInput, TinCanRecorder } from "@tincan-webmcp/browser";
 import "./webmcp.d.ts";
 
 export const REPORT_SITE_ISSUE_SCHEMA = {
@@ -23,7 +23,6 @@ export const REPORT_SITE_ISSUE_SCHEMA = {
     expected: { type: "string", maxLength: 1_000 },
     observed: { type: "string", maxLength: 1_000 },
     operation: { type: "string", maxLength: 200 },
-    confidence: { type: "number", minimum: 0, maximum: 1 },
   },
   required: ["category", "severity", "summary"],
 } as const;
@@ -34,7 +33,17 @@ const isReportInput = (value: unknown): value is ReportSiteIssueInput => {
   return typeof input.category === "string" && typeof input.severity === "string" && typeof input.summary === "string";
 };
 
-export async function registerReportSiteIssue(recorder: TinCanRecorder, signal?: AbortSignal): Promise<boolean> {
+export interface ReportSiteIssueLifecycle {
+  onStart?(input: ReportSiteIssueInput): void;
+  onSuccess?(result: ReportResult, input: ReportSiteIssueInput): void;
+  onError?(error: unknown, input: ReportSiteIssueInput): void;
+}
+
+export async function registerReportSiteIssue(
+  recorder: TinCanRecorder,
+  signal?: AbortSignal,
+  lifecycle?: ReportSiteIssueLifecycle,
+): Promise<boolean> {
   if (!document.modelContext) return false;
 
   // Kept concrete and public so reviewers can verify genuine WebMCP usage.
@@ -47,8 +56,15 @@ export async function registerReportSiteIssue(recorder: TinCanRecorder, signal?:
       annotations: { readOnlyHint: false, untrustedContentHint: true },
       execute: async (input) => {
         if (!isReportInput(input)) throw new TypeError("Invalid report_site_issue input");
-        const result = await recorder.reportIssue(input);
-        return JSON.stringify({ status: result.status, incidentId: result.incidentId });
+        lifecycle?.onStart?.(input);
+        try {
+          const result = await recorder.reportIssue(input);
+          lifecycle?.onSuccess?.(result, input);
+          return { status: result.status, incidentId: result.incidentId };
+        } catch (error) {
+          lifecycle?.onError?.(error, input);
+          throw error;
+        }
       },
     },
     signal ? { signal } : undefined,
