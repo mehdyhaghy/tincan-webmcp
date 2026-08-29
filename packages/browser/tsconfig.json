@@ -6,7 +6,11 @@
     "rootDir": "src",
     "lib": ["ES2022", "DOM"]
   },
-  "references": [{ "path": "../otel" }, { "path": "../otel-instrumentation" }],
+  "references": [
+    { "path": "../core" },
+    { "path": "../otel" },
+    { "path": "../otel-instrumentation" }
+  ],
   "include": ["src"],
   "exclude": ["src/**/*.test.ts"]
 }

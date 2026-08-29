@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { IncidentPayload } from "@tincan-webmcp/browser";
+import type { IncidentPayload } from "@tincan-webmcp/core";
 import { prepareIncident } from "./index";
 
 const payload = (): IncidentPayload => ({
@@ -51,6 +51,22 @@ describe("server incident preparation", () => {
     expect(incident.diagnostics.resourceLogs[0]?.scopeLogs[0]?.logRecords).toEqual([]);
     expect(incident.diagnostics.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual([]);
     expect(incident.diagnostics.resourceSpans[0]?.scopeSpans[0]?.spans).toEqual([]);
+  });
+
+  it("preserves up to 500 evidence records during server sanitization", () => {
+    const input = payload();
+    const scope = input.diagnostics.resourceLogs[0]!.scopeLogs[0]!;
+    scope.logRecords = Array.from({ length: 500 }, (_, index) => ({
+      timestamp: "2026-08-27T12:00:00.000Z",
+      observedTimestamp: "2026-08-27T12:00:00.000Z",
+      eventName: "tincan.browser.console",
+      severityText: "INFO",
+      severityNumber: 9,
+      body: `record ${index}`,
+    }));
+    const incident = prepareIncident(input, 1);
+    expect(incident.diagnostics.resourceLogs[0]!.scopeLogs[0]!.logRecords).toHaveLength(500);
+    expect(incident.diagnostics.truncated).toBeUndefined();
   });
 
   it("does not classify an incident with a failed HTTP span as semantic-only", () => {

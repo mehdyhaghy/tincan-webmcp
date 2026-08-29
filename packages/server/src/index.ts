@@ -1,4 +1,4 @@
-import { sanitizeValue, type DiagnosticEvent, type IncidentPayload } from "@tincan-webmcp/browser";
+import { sanitizeValueWithMetadata, type IncidentPayload } from "@tincan-webmcp/core";
 
 export interface StoredIncident extends IncidentPayload {
   id: string;
@@ -16,12 +16,6 @@ const categories = new Set([
   "other",
 ]);
 const severities = new Set(["info", "degraded", "blocking"]);
-
-const failedNetworkCount = (records: DiagnosticEvent[]): number =>
-  records.filter((record) =>
-    record.eventName === "tincan.browser.http.request" &&
-    Number(record.attributes?.["http.response.status_code"] ?? 0) >= 400,
-  ).length;
 
 const failedSpanCount = (payload: IncidentPayload): number => payload.diagnostics.resourceSpans
   .flatMap((group) => group.scopeSpans.flatMap((scope) => scope.spans))
@@ -47,14 +41,18 @@ export function validateIncident(input: unknown): asserts input is IncidentPaylo
 
 export function prepareIncident(input: unknown, sequence: number): StoredIncident {
   validateIncident(input);
-  const sanitized = sanitizeValue(input) as IncidentPayload;
+  const sanitizedResult = sanitizeValueWithMetadata(input, {
+    maxArrayItems: 500,
+    maxObjectEntries: 100,
+  });
+  const sanitized = sanitizedResult.value as IncidentPayload;
+  if (sanitizedResult.truncated) sanitized.diagnostics.truncated = true;
   const records = sanitized.diagnostics.resourceLogs.flatMap((group) =>
     group.scopeLogs.flatMap((scope) => scope.logRecords),
   );
   const jsErrorCount = records.filter((record) => record.eventName === "tincan.browser.error").length;
   const semanticOnly = sanitized.agentObservation.severity !== "info" &&
     jsErrorCount === 0 &&
-    failedNetworkCount(records) === 0 &&
     failedSpanCount(sanitized) === 0;
   const id = `INC-${String(1041 + sequence).padStart(4, "0")}`;
   const fingerprint = [

@@ -6,6 +6,7 @@ import { DiagnosticRingBuffer, type RingBufferOptions } from "./ring-buffer";
 import { sanitizePath, sanitizeString, sanitizeValue } from "./sanitize";
 import type { DiagnosticEvent, IncidentPayload, ReportResult, ReportSiteIssueInput } from "./types";
 import type { OtelAttributes, OtelInstrumentationScope, OtelResource, OtelTelemetrySnapshot } from "@tincan-webmcp/otel";
+import { serializeIncidentPayload } from "./payload";
 
 export interface TinCanOptions extends RingBufferOptions {
   endpoint?: string;
@@ -115,12 +116,13 @@ export class TinCanRecorder {
         version: "0.1.0",
       }),
     };
+    const serialized = serializeIncidentPayload(payload);
     const transport = this.#options.fetch ?? globalThis.fetch;
     const response = await transport(this.#options.endpoint ?? "/_tincan/issues", {
       method: "POST",
       credentials: "same-origin",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
+      body: serialized.body,
     });
     if (!response.ok) throw new Error(`TinCan report failed with ${response.status}`);
     return (await response.json()) as ReportResult;

@@ -35,8 +35,16 @@
       "name": "@tincan-webmcp/browser",
       "version": "0.1.0",
       "dependencies": {
+        "@tincan-webmcp/core": "workspace:*",
         "@tincan-webmcp/otel": "workspace:*",
         "@tincan-webmcp/otel-instrumentation": "workspace:*",
+      },
+    },
+    "packages/core": {
+      "name": "@tincan-webmcp/core",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tincan-webmcp/otel": "workspace:*",
       },
     },
     "packages/otel": {
@@ -61,7 +69,7 @@
       "name": "@tincan-webmcp/server",
       "version": "0.1.0",
       "dependencies": {
-        "@tincan-webmcp/browser": "workspace:*",
+        "@tincan-webmcp/core": "workspace:*",
       },
     },
     "packages/webmcp": {
@@ -146,6 +154,8 @@
     "@tincan-webmcp/api": ["@tincan-webmcp/api@workspace:apps/api"],
 
     "@tincan-webmcp/browser": ["@tincan-webmcp/browser@workspace:packages/browser"],
+
+    "@tincan-webmcp/core": ["@tincan-webmcp/core@workspace:packages/core"],
 
     "@tincan-webmcp/otel": ["@tincan-webmcp/otel@workspace:packages/otel"],
 
