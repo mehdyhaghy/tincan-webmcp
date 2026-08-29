@@ -75,7 +75,7 @@ export class MemoryIssueStore {
   }
 
   list(): StoredIncident[] {
-    return structuredClone(this.#incidents);
+    return JSON.parse(JSON.stringify(this.#incidents)) as StoredIncident[];
   }
 
   clear(): void {

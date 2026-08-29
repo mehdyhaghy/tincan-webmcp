@@ -17,23 +17,39 @@ export interface SanitizeResult {
   truncated: boolean;
 }
 
+const isPaymentCard = (candidate: string): boolean => {
+  const digits = candidate.replace(/[^\d]/g, "");
+  if (digits.length < 13 || digits.length > 19 || new Set(digits).size < 2) return false;
+
+  let checksum = 0;
+  for (let index = digits.length - 1; index >= 0; index -= 1) {
+    let digit = Number(digits[index]);
+    if ((digits.length - index) % 2 === 0) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    checksum += digit;
+  }
+  return checksum % 10 === 0;
+};
+
 export function sanitizeString(value: string, maxLength = 2_000): string {
   return value
     .replace(PEM, "[REDACTED_PRIVATE_KEY]")
     .replace(BEARER, "Bearer [REDACTED]")
     .replace(JWT, "[REDACTED_JWT]")
-    .replace(CARD, "[REDACTED_PAYMENT_CARD]")
+    .replace(CARD, (candidate) => isPaymentCard(candidate) ? "[REDACTED_PAYMENT_CARD]" : candidate)
     .replace(UUID, "[REDACTED_UUID]")
     .slice(0, maxLength);
 }
 
 export function sanitizePath(input: string): string {
-  try {
-    const url = new URL(input, "https://tincan.invalid");
-    return url.pathname.replace(UUID, ":id").replace(LONG_NUMBER, ":id");
-  } catch {
-    return sanitizeString(input.split(/[?#]/, 1)[0] ?? "", 500);
-  }
+  const withoutSuffix = input.split(/[?#]/, 1)[0] ?? "";
+  const withoutOrigin = withoutSuffix
+    .replace(/^[a-z][a-z\d+.-]*:\/\/[^/]*/i, "")
+    .replace(/^\/\/[^/]*/, "");
+  const path = withoutOrigin.startsWith("/") ? withoutOrigin : `/${withoutOrigin}`;
+  return sanitizeString((path || "/").replace(UUID, ":id").replace(LONG_NUMBER, ":id"), 500);
 }
 
 export function sanitizeValueWithMetadata(value: unknown, options: SanitizeOptions = {}): SanitizeResult {
