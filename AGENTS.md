@@ -5,6 +5,7 @@
 This Bun workspace follows the requirements in `spec.md`; the original PDF is retained as `tincan_webmcp_spec.pdf`. Use this layout:
 
 - `packages/browser`: framework-independent collectors, sanitizer, ring buffer, and transport.
+- `packages/otel-instrumentation`: official OpenTelemetry browser instrumentation, Resource Timing fallback, and bounded span processor.
 - `packages/webmcp`: the public `report_site_issue` adapter and visible browser tool registration.
 - `packages/server`: validation, re-sanitization, rate limiting, and persistence hooks.
 - `packages/otel`: OTLP-aligned log, metric, trace, resource, and scope types.

@@ -2,68 +2,36 @@
 
 TinCan joins an agent's semantic observation with recent site-owned browser signals. The agent never receives the private diagnostic payload.
 
-```text
-User goal
-  ↓
-Browser agent (/agent)
-  ├─ discovers site tools through WebMCP
-  ├─ invokes a business tool
-  ├─ verifies the result when a read tool is available
-  └─ calls report_site_issue only after a verified failure
-            ↓
-Target site (/)
-  ├─ business WebMCP tools
-  ├─ TinCan report_site_issue tool
-  └─ browser recorder
-       ├─ sanitized log records
-       ├─ bounded metric points
-       └─ browser HTTP spans
-            ↓
-       POST /_tincan/issues
-            ↓
-       validate, re-sanitize, classify, and store
-            ↓
-       Admin issue UI (/admin/*)
-```
+![TinCan WebMCP flow](architecture.png)
+
+The editable diagram is available in [Draw.io format](architecture.drawio).
 
 ## Workspace packages
 
-- `@tincan-webmcp/browser` provides the framework-independent recorder, sanitization, bounded buffer, incident assembly, and HTTP transport.
-- `@tincan-webmcp/webmcp` registers `report_site_issue` through the current document-scoped WebMCP API.
-- `@tincan-webmcp/server` validates incoming incidents, sanitizes them again, generates IDs/fingerprints, and performs semantic-only classification.
-- `@tincan-webmcp/otel` defines the internal resource, instrumentation scope, LogRecord, Metric, and Span types.
+- `@tincan-webmcp/browser` provides incident assembly, sanitization, bounded logs and metrics, and HTTP transport.
+- `@tincan-webmcp/otel-instrumentation` integrates official OpenTelemetry fetch and XHR instrumentation, adds the Resource Timing fallback, and retains spans for 120 seconds.
+- `@tincan-webmcp/webmcp` registers `report_site_issue` through the document-scoped WebMCP API.
+- `@tincan-webmcp/server` validates, re-sanitizes, classifies, and stores incidents.
+- `@tincan-webmcp/otel` defines the OTLP-aligned incident signal types.
 
-## Applications
+## Runtime flow
 
-- `apps/demo-saas` is one Vue application containing the target site, the browser agent, and the admin issue interface. The target site registers three business tools plus TinCan's reporting tool.
-- `apps/api` is a Bun reference server with in-memory subscription and issue state.
+1. The website initializes TinCan once. It transparently instruments fetch and XHR through the OpenTelemetry JavaScript SDK; application request functions remain unchanged.
+2. A passive Resource Timing observer captures same-document requests that bypass the patched global APIs, including requests initiated from a separate WebMCP execution realm.
+3. The agent discovers the website's WebMCP tools, invokes a business operation, and verifies the result with a read tool when available.
+4. After a failure, the agent calls `report_site_issue` with its expected and observed behavior.
+5. TinCan snapshots the 120-second logs, metrics, and traces, then sends the sanitized incident to `/_tincan/issues`.
+6. The API validates and re-sanitizes the payload, assigns an `INC-*` ID, and returns only the status and incident ID.
+7. The admin UI displays the complete submitted report and its captured evidence.
 
-The web application uses one origin and port. Vite proxies `/api` and `/_tincan` to the Bun server during local development, preserving same-origin calls for every route.
+Sites with an existing OpenTelemetry provider can register `createTinCanInstrumentations(...)` and `TinCanFlightRecorderSpanProcessor` with that provider, then pass the processor to `createTinCan`. The convenience setup creates a private browser provider only when no processor is supplied.
 
-## Incident lifecycle
+## Demo applications
 
-1. `TinCanRecorder.start()` records navigation and instruments `fetch`, console warnings/errors, window errors, and unhandled rejections.
-2. The browser agent receives a user goal and discovers tools from the target site's descendant frame with `getTools()`; it does not inspect or operate the visible product controls.
-3. The agent selects and invokes a business tool from its metadata, then uses a read-only tool to verify the result when available.
-4. Only when that evidence indicates failure does the agent call `report_site_issue` with semantic fields such as `expected`, `observed`, and `operation`.
-5. The recorder adds an issue LogRecord and freezes the current logs, metrics, and spans.
-6. The browser posts the payload to `/_tincan/issues`.
-7. The server validates lengths and enums, sanitizes the complete payload again, and generates an `INC-*` ID.
-8. The issue is classified as semantic-only when severity is not `info`, no JavaScript error was recorded, and no HTTP response has a failure status.
+`apps/demo-saas` contains the product, developer harness, and admin routes in one Vue application. `apps/api` is the Bun reference server with in-memory subscription and issue state. Vite proxies `/api` and `/_tincan` to the API during local development.
 
-## Reference API
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/subscription` | Read persisted demo state |
-| `POST` | `/api/licenses` | Add `count` licenses to the subscription |
-| `POST` | `/api/usage-export` | Return the demo gateway-timeout failure |
-| `POST` | `/api/reset` | Restore 10 licenses and clear issues |
-| `GET` | `/api/issues` | List in-memory issues |
-| `POST` | `/_tincan/issues` | Validate and ingest a TinCan issue |
-
-The canonical defect is deliberately implemented in the license endpoint: adding 10 licenses to the initial 10 reports an expected total of 20 but persists 19. The product form and `add_licenses` WebMCP tool use this same operation.
+The demo exposes `add_licenses`, `remove_licenses`, `get_subscription`, `export_usage_report`, and `report_site_issue`. Adding one license persists two; removing one returns HTTP `504` without changing state.
 
 ## Current boundaries
 
-The reference store is process memory only and is cleared on restart. It has no authentication, tenancy, durable persistence, or production exporter. The browser currently instruments `fetch`, not XHR. Web Vitals, resource failures, long tasks, trace propagation, native OTLP export, and collector adapters remain future work.
+The issue store is process memory only. Native OTLP/HTTP export, durable persistence, authentication, tenancy, Web Vitals, long-task collection, and backend trace correlation remain future work. Resource Timing fallback spans include URL path, timing, and Chromium response status, but cannot recover an HTTP method that was hidden by another JavaScript realm.

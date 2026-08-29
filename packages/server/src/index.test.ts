@@ -53,6 +53,26 @@ describe("server incident preparation", () => {
     expect(incident.diagnostics.resourceSpans[0]?.scopeSpans[0]?.spans).toEqual([]);
   });
 
+  it("does not classify an incident with a failed HTTP span as semantic-only", () => {
+    const input = payload();
+    input.agentObservation.category = "network_failure";
+    input.diagnostics.resourceSpans[0]!.scopeSpans[0]!.spans.push({
+      traceId: "1".repeat(32),
+      spanId: "2".repeat(16),
+      name: "HTTP /api/licenses/remove",
+      kind: "CLIENT",
+      startTime: "2026-08-27T12:00:00.000Z",
+      endTime: "2026-08-27T12:00:01.000Z",
+      attributes: {
+        "url.path": "/api/licenses/remove",
+        "http.response.status_code": 504,
+      },
+      status: { code: "ERROR" },
+      links: [],
+    });
+    expect(prepareIncident(input, 1).classification.semanticOnly).toBe(false);
+  });
+
   it("rejects oversized semantic fields", () => {
     const input = payload();
     input.agentObservation.summary = "x".repeat(301);

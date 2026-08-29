@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DiagnosticRingBuffer } from "./ring-buffer";
+import { DEFAULT_DIAGNOSTIC_WINDOW_MS, DiagnosticRingBuffer } from "./ring-buffer";
 import type { DiagnosticEvent } from "./types";
 
 const record = (timestamp: string, body: string): DiagnosticEvent => ({
@@ -12,6 +12,15 @@ const record = (timestamp: string, body: string): DiagnosticEvent => ({
 });
 
 describe("diagnostic ring buffer", () => {
+  it("keeps a 120-second diagnostic window by default", () => {
+    expect(DEFAULT_DIAGNOSTIC_WINDOW_MS).toBe(120_000);
+    const buffer = new DiagnosticRingBuffer();
+    const start = Date.parse("2026-01-01T00:00:00.000Z");
+    buffer.push(record(new Date(start).toISOString(), "inside"), start);
+    expect(buffer.snapshot(start + 119_999).map((item) => item.body)).toEqual(["inside"]);
+    expect(buffer.snapshot(start + 120_001)).toEqual([]);
+  });
+
   it("evicts records outside the time window", () => {
     const buffer = new DiagnosticRingBuffer({ maxAgeMs: 1_000 });
     buffer.push(record("2026-01-01T00:00:00.000Z", "old"), Date.parse("2026-01-01T00:00:00.000Z"));

@@ -1,0 +1,66 @@
+<mxfile host="app.diagrams.net" modified="2026-08-28T05:05:00.000Z" version="28.0.6">
+  <diagram id="tincan-webmcp-flow" name="WebMCP flow">
+    <mxGraphModel dx="1500" dy="650" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="650" math="0" shadow="0" background="#F7F8FC">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="TinCan WebMCP flow" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=30;fontStyle=1;fontColor=#101828;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="34" width="1380" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Agent-reported failures with site-owned OpenTelemetry evidence." style="text;html=1;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=15;fontColor=#475467;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="76" width="1380" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="agent" value="&lt;b&gt;Agent&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#F9F5FF;strokeColor=#7F56D9;strokeWidth=2;fontFamily=Helvetica;fontSize=16;fontColor=#101828;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="270" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="site-boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#FFFFFF;strokeColor=#D0D5DD;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="280" y="145" width="580" height="390" as="geometry" />
+        </mxCell>
+        <mxCell id="site-title" value="Website" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=15;fontStyle=1;fontColor=#344054;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="310" y="165" width="500" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="site-tools" value="&lt;b&gt;WebMCP Site tools&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#F9F5FF;strokeColor=#7F56D9;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#101828;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="330" y="265" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="website-operation" value="&lt;b&gt;Website operation&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#EFF8FF;strokeColor=#2E90FA;strokeWidth=1.5;fontFamily=Helvetica;fontSize=15;fontColor=#101828;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="205" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="otel" value="&lt;b&gt;OpenTelemetry evidence&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ECFDF3;strokeColor=#12B76A;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#101828;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="620" y="395" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="assembly" value="&lt;b&gt;TinCan report&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#FFFAEB;strokeColor=#F79009;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#101828;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="970" y="265" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ingestion" value="&lt;b&gt;Issue ingestion&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#FFF7ED;strokeColor=#F97316;strokeWidth=1.5;fontFamily=Helvetica;fontSize=15;fontColor=#101828;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="265" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="admin" value="&lt;b&gt;Issue investigation&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#FDF2FA;strokeColor=#EE46BC;strokeWidth=1.5;fontFamily=Helvetica;fontSize=15;fontColor=#101828;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="425" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="agent-tools" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7F56D9;strokeWidth=2.5;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="agent" target="site-tools">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tools-operation" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2E90FA;strokeWidth=2;endArrow=block;endFill=1;exitX=1;exitY=0.3;entryX=0;entryY=0.5;" edge="1" parent="1" source="site-tools" target="website-operation">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="operation-otel" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#12B76A;strokeWidth=2;dashed=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="website-operation" target="otel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tools-assembly" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7F56D9;strokeWidth=2.5;endArrow=block;endFill=1;exitX=1;exitY=0.75;entryX=0;entryY=0.35;" edge="1" parent="1" source="site-tools" target="assembly">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="570" y="325" /><mxPoint x="570" y="345" /><mxPoint x="920" y="345" /><mxPoint x="920" y="293" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="otel-assembly" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#12B76A;strokeWidth=2.5;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.75;" edge="1" parent="1" source="otel" target="assembly">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assembly-ingestion" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#F79009;strokeWidth=2.5;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="assembly" target="ingestion">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ingestion-admin" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EE46BC;strokeWidth=2;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="ingestion" target="admin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

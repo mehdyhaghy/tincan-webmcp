@@ -37,7 +37,7 @@ The server sanitizes the complete incident again after schema validation. Browse
 
 | Control | Current value |
 | --- | --- |
-| Recorder window | 60 seconds |
+| Recorder window | 120 seconds |
 | Maximum records | 500 |
 | Recorder byte budget | 1 MB |
 | Maximum incident request | 256 KB |

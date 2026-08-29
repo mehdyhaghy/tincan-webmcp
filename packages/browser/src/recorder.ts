@@ -1,12 +1,17 @@
+import {
+  TinCanBrowserTelemetry,
+  type TinCanFlightRecorderSpanProcessor,
+} from "@tincan-webmcp/otel-instrumentation";
 import { DiagnosticRingBuffer, type RingBufferOptions } from "./ring-buffer";
 import { sanitizePath, sanitizeString, sanitizeValue } from "./sanitize";
 import type { DiagnosticEvent, IncidentPayload, ReportResult, ReportSiteIssueInput } from "./types";
-import type { OtelAttributes, OtelInstrumentationScope, OtelResource, OtelSpan, OtelTelemetrySnapshot } from "@tincan-webmcp/otel";
+import type { OtelAttributes, OtelInstrumentationScope, OtelResource, OtelTelemetrySnapshot } from "@tincan-webmcp/otel";
 
 export interface TinCanOptions extends RingBufferOptions {
   endpoint?: string;
   application: { name: string; version?: string; environment?: string };
   fetch?: typeof globalThis.fetch;
+  spanProcessor?: TinCanFlightRecorderSpanProcessor;
 }
 
 type EventLevel = "info" | "warn" | "error";
@@ -20,11 +25,10 @@ const otelSeverity = (level: EventLevel): Pick<DiagnosticEvent, "severityText" |
 export class TinCanRecorder {
   readonly buffer: DiagnosticRingBuffer;
   readonly #options: TinCanOptions;
-  readonly #spans: OtelSpan[] = [];
-  readonly #requestDurations: number[] = [];
+  readonly #telemetry?: TinCanBrowserTelemetry;
+  readonly #spanProcessor: TinCanFlightRecorderSpanProcessor;
   readonly #startedAt = new Date().toISOString();
   #started = false;
-  #originalFetch?: typeof globalThis.fetch;
   #originalWarn?: typeof console.warn;
   #originalError?: typeof console.error;
   #onError?: (event: ErrorEvent) => void;
@@ -33,6 +37,20 @@ export class TinCanRecorder {
   constructor(options: TinCanOptions) {
     this.#options = options;
     this.buffer = new DiagnosticRingBuffer(options);
+    const endpointPath = sanitizePath(options.endpoint ?? "/_tincan/issues");
+    const escapedEndpoint = endpointPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (options.spanProcessor) {
+      this.#spanProcessor = options.spanProcessor;
+    } else {
+      this.#telemetry = new TinCanBrowserTelemetry({
+        application: options.application,
+        ...(options.maxAgeMs !== undefined ? { maxAgeMs: options.maxAgeMs } : {}),
+        ...(options.maxEvents !== undefined ? { maxSpans: options.maxEvents } : {}),
+        sanitizePath,
+        ignoreUrls: [new RegExp(`${escapedEndpoint}(?:\\?|$)`)],
+      });
+      this.#spanProcessor = this.#telemetry.flightRecorder;
+    }
   }
 
   start(): this {
@@ -40,7 +58,7 @@ export class TinCanRecorder {
     this.#started = true;
     this.record("tincan.browser.navigation", location.pathname, { "url.path": location.pathname });
     this.#patchConsole();
-    this.#patchFetch();
+    this.#telemetry?.start();
     this.#onError = (event) => this.record("tincan.browser.error", event.message, undefined, "error");
     this.#onRejection = (event) => this.record("tincan.browser.unhandled_rejection", String(event.reason), undefined, "error");
     window.addEventListener("error", this.#onError);
@@ -50,9 +68,9 @@ export class TinCanRecorder {
 
   stop(): void {
     if (!this.#started || typeof window === "undefined") return;
-    if (this.#originalFetch) window.fetch = this.#originalFetch;
     if (this.#originalWarn) console.warn = this.#originalWarn;
     if (this.#originalError) console.error = this.#originalError;
+    this.#telemetry?.stop();
     if (this.#onError) window.removeEventListener("error", this.#onError);
     if (this.#onRejection) window.removeEventListener("unhandledrejection", this.#onRejection);
     this.#started = false;
@@ -97,7 +115,7 @@ export class TinCanRecorder {
         version: "0.1.0",
       }),
     };
-    const transport = this.#options.fetch ?? this.#originalFetch ?? globalThis.fetch;
+    const transport = this.#options.fetch ?? globalThis.fetch;
     const response = await transport(this.#options.endpoint ?? "/_tincan/issues", {
       method: "POST",
       credentials: "same-origin",
@@ -121,93 +139,18 @@ export class TinCanRecorder {
     };
   }
 
-  #patchFetch(): void {
-    this.#originalFetch = window.fetch.bind(window);
-    const original = this.#originalFetch;
-    window.fetch = async (input, init) => {
-      const started = performance.now();
-      const startTime = new Date().toISOString();
-      const traceId = this.#hexId(32);
-      const spanId = this.#hexId(16);
-      const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
-      const path = sanitizePath(input instanceof Request ? input.url : String(input));
-      try {
-        const response = await original(input, init);
-        const durationMs = Math.round(performance.now() - started);
-        this.#requestDurations.push(durationMs);
-        this.record("tincan.browser.http.request", `${method} ${path}`, {
-          "http.request.method": method,
-          "url.path": path,
-          "http.response.status_code": response.status,
-          "http.request.duration_ms": durationMs,
-        });
-        this.#recordHttpSpan({ traceId, spanId, method, path, status: response.status, durationMs, startTime });
-        return response;
-      } catch (error) {
-        const durationMs = Math.round(performance.now() - started);
-        this.#requestDurations.push(durationMs);
-        this.record("tincan.browser.http.request", `${method} ${path}`, {
-          "http.request.method": method,
-          "url.path": path,
-          "http.response.status_code": 0,
-          "http.request.duration_ms": durationMs,
-          "error.message": sanitizeString(String(error), 300),
-        }, "error");
-        this.#recordHttpSpan({
-          traceId,
-          spanId,
-          method,
-          path,
-          status: 0,
-          durationMs,
-          startTime,
-          error: sanitizeString(String(error), 300),
-        });
-        throw error;
-      }
-    };
-  }
-
-  #recordHttpSpan(input: {
-    traceId: string;
-    spanId: string;
-    method: string;
-    path: string;
-    status: number;
-    durationMs: number;
-    startTime: string;
-    error?: string;
-  }): void {
-    this.#spans.push({
-      traceId: input.traceId,
-      spanId: input.spanId,
-      name: `${input.method} ${input.path}`,
-      kind: "CLIENT",
-      startTime: input.startTime,
-      endTime: new Date().toISOString(),
-      attributes: {
-        "http.request.method": input.method,
-        "url.path": input.path,
-        "http.response.status_code": input.status,
-        "http.request.duration_ms": input.durationMs,
-      },
-      status: input.status === 0 || input.status >= 400
-        ? { code: "ERROR", ...(input.error ? { message: input.error } : {}) }
-        : { code: "UNSET" },
-      links: [],
-    });
-    if (this.#spans.length > 500) this.#spans.shift();
-  }
-
   #telemetrySnapshot(resource: OtelResource, scope: OtelInstrumentationScope): OtelTelemetrySnapshot {
+    const snapshotTime = Date.now();
     const records = this.buffer.snapshot();
-    const now = new Date().toISOString();
-    const failures = records.filter((record) =>
-      record.eventName === "tincan.browser.http.request" &&
-      Number(record.attributes?.["http.response.status_code"] ?? 0) >= 400,
+    const now = new Date(snapshotTime).toISOString();
+    const spans = this.#spanProcessor.snapshot(snapshotTime);
+    const failures = spans.filter((span) =>
+      span.status.code === "ERROR" || Number(span.attributes["http.response.status_code"] ?? 0) >= 400,
     ).length;
     const errors = records.filter((record) => record.eventName === "tincan.browser.error").length;
-    const durations = this.#requestDurations.slice(-500);
+    const durations = spans
+      .map((span) => Number(span.attributes["http.request.duration_ms"] ?? 0))
+      .filter((duration) => Number.isFinite(duration));
     const metrics = [
       {
         name: "http.client.request.duration",
@@ -243,13 +186,8 @@ export class TinCanRecorder {
     return {
       resourceLogs: [{ resource, scopeLogs: [{ scope, logRecords: records }] }],
       resourceMetrics: [{ resource, scopeMetrics: [{ scope, metrics }] }],
-      resourceSpans: [{ resource, scopeSpans: [{ scope, spans: structuredClone(this.#spans) }] }],
+      resourceSpans: [{ resource, scopeSpans: [{ scope, spans }] }],
     };
-  }
-
-  #hexId(length: number): string {
-    const bytes = crypto.getRandomValues(new Uint8Array(length / 2));
-    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
   }
 }
 

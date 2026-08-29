@@ -5,6 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
-    "@tincan-webmcp/otel": "workspace:*"
+    "@tincan-webmcp/otel": "workspace:*",
+    "@tincan-webmcp/otel-instrumentation": "workspace:*"
   }
 }

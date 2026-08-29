@@ -1,4 +1,7 @@
 import type { DiagnosticEvent } from "./types";
+import { DEFAULT_DIAGNOSTIC_WINDOW_MS } from "@tincan-webmcp/otel-instrumentation";
+
+export { DEFAULT_DIAGNOSTIC_WINDOW_MS } from "@tincan-webmcp/otel-instrumentation";
 
 export interface RingBufferOptions {
   maxAgeMs?: number;
@@ -15,7 +18,7 @@ export class DiagnosticRingBuffer {
 
   constructor(options: RingBufferOptions = {}) {
     this.#options = {
-      maxAgeMs: options.maxAgeMs ?? 60_000,
+      maxAgeMs: options.maxAgeMs ?? DEFAULT_DIAGNOSTIC_WINDOW_MS,
       maxEvents: options.maxEvents ?? 500,
       maxBytes: options.maxBytes ?? 1_000_000,
     };

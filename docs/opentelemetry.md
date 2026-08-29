@@ -24,7 +24,6 @@ Each browser event is represented as a LogRecord-like object with timestamp, obs
 | `tincan.browser.console` | Console warning or error |
 | `tincan.browser.error` | Window JavaScript error |
 | `tincan.browser.unhandled_rejection` | Unhandled promise rejection |
-| `tincan.browser.http.request` | Completed or failed browser fetch |
 | `tincan.site.issue.reported` | Agent issue observation submitted |
 
 Severity numbers use the OpenTelemetry ranges: INFO `9`, WARN `13`, and ERROR `17`.
@@ -43,23 +42,51 @@ Metric attributes must remain bounded and low-cardinality. Agent prose, paths co
 
 ## Traces
 
-Each instrumented `fetch` creates a CLIENT span with:
+TinCan registers the official OpenTelemetry fetch and XMLHttpRequest instrumentations. Their completed CLIENT spans are passed through `TinCanFlightRecorderSpanProcessor`, immediately reduced to the privacy allowlist, and retained for 120 seconds. Retained fields are:
 
-- a lowercase 32-character trace ID and 16-character span ID
-- start and end timestamps
+- trace and span identifiers
+- start and end timestamps and duration
 - `http.request.method`
 - sanitized `url.path`
 - `http.response.status_code`
-- measured duration
 - UNSET or ERROR status
 
-The current recorder generates standalone browser trace IDs. It does not yet inject `traceparent`, consume an installed OpenTelemetry provider, or link the reported issue to an existing backend span.
+Some WebMCP implementations execute a site tool in a realm that captured `fetch` before instrumentation loaded. A passive `PerformanceObserver` fallback sees these resource requests without changing the website's request flow. Where the browser exposes `PerformanceResourceTiming.responseStatus`, it records the path, duration, status, and error state. Resource Timing does not expose the HTTP method, so a fallback span is named `HTTP /path`; a later official span replaces it when both describe the same request.
+
+## SDK integration
+
+Applications with an OpenTelemetry provider should add TinCan to that provider once:
+
+```ts
+import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
+import { createTinCan, sanitizePath } from "@tincan-webmcp/browser";
+import {
+  createTinCanInstrumentations,
+  TinCanFlightRecorderSpanProcessor,
+} from "@tincan-webmcp/otel-instrumentation";
+
+const recorder = new TinCanFlightRecorderSpanProcessor({ maxAgeMs: 120_000, sanitizePath });
+const provider = new WebTracerProvider({ spanProcessors: [recorder] });
+
+registerInstrumentations({
+  tracerProvider: provider,
+  instrumentations: createTinCanInstrumentations(recorder, {
+    application: { name: "acme-saas" },
+    sanitizePath,
+  }),
+});
+
+createTinCan({ application: { name: "acme-saas" }, spanProcessor: recorder }).start();
+```
+
+This avoids a competing provider and requires no changes to business request functions. If no processor is supplied, `createTinCan` creates the same browser instrumentation through its convenience setup.
 
 ## Transport compatibility
 
 The current payload mirrors OTLP's resource/scope/signal nesting and semantic attribute names, but it is application JSON rather than a byte-for-byte OTLP/JSON export. For example, timestamps are ISO strings rather than OTLP nanosecond integer strings, and bodies/attributes use ordinary JSON values rather than encoded `AnyValue` objects.
 
-A production exporter must map these fields to the official OTLP schema and send them through an OpenTelemetry SDK, Collector, or OTLP/HTTP endpoint. This adapter is planned but not implemented. Do not point the current `/_tincan/issues` payload directly at an OTLP receiver.
+A production exporter must map these fields to the official OTLP schema and send them through an OpenTelemetry Collector or OTLP/HTTP endpoint. This export adapter is planned but not implemented. Do not point the current `/_tincan/issues` payload directly at an OTLP receiver.
 
 References:
 
@@ -67,3 +94,4 @@ References:
 - [OpenTelemetry metrics data model](https://opentelemetry.io/docs/specs/otel/metrics/data-model/)
 - [OpenTelemetry tracing API](https://opentelemetry.io/docs/specs/otel/trace/api/)
 - [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/)
+- [Resource Timing](https://www.w3.org/TR/resource-timing/)

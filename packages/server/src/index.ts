@@ -23,6 +23,13 @@ const failedNetworkCount = (records: DiagnosticEvent[]): number =>
     Number(record.attributes?.["http.response.status_code"] ?? 0) >= 400,
   ).length;
 
+const failedSpanCount = (payload: IncidentPayload): number => payload.diagnostics.resourceSpans
+  .flatMap((group) => group.scopeSpans.flatMap((scope) => scope.spans))
+  .filter((span) =>
+    span.status.code === "ERROR" ||
+    Number(span.attributes["http.response.status_code"] ?? 0) >= 400,
+  ).length;
+
 export function validateIncident(input: unknown): asserts input is IncidentPayload {
   if (!input || typeof input !== "object") throw new TypeError("Incident payload must be an object");
   const payload = input as Partial<IncidentPayload>;
@@ -45,7 +52,10 @@ export function prepareIncident(input: unknown, sequence: number): StoredInciden
     group.scopeLogs.flatMap((scope) => scope.logRecords),
   );
   const jsErrorCount = records.filter((record) => record.eventName === "tincan.browser.error").length;
-  const semanticOnly = sanitized.agentObservation.severity !== "info" && jsErrorCount === 0 && failedNetworkCount(records) === 0;
+  const semanticOnly = sanitized.agentObservation.severity !== "info" &&
+    jsErrorCount === 0 &&
+    failedNetworkCount(records) === 0 &&
+    failedSpanCount(sanitized) === 0;
   const id = `INC-${String(1041 + sequence).padStart(4, "0")}`;
   const fingerprint = [
     sanitized.agentObservation.category,
