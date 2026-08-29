@@ -18,6 +18,12 @@ export interface TinCanOptions extends RingBufferOptions {
 
 type EventLevel = "info" | "warn" | "error";
 
+export const createTinCanEndpointPattern = (endpoint = "/_tincan/issues"): RegExp => {
+  const endpointPath = sanitizePath(endpoint);
+  const escapedEndpoint = endpointPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`${escapedEndpoint}(?:\\?|$)`);
+};
+
 const otelSeverity = (level: EventLevel): Pick<DiagnosticEvent, "severityText" | "severityNumber"> => {
   if (level === "error") return { severityText: "ERROR", severityNumber: 17 };
   if (level === "warn") return { severityText: "WARN", severityNumber: 13 };
@@ -38,8 +44,6 @@ export class TinCanRecorder {
   constructor(options: TinCanOptions) {
     this.#options = options;
     this.buffer = new DiagnosticRingBuffer(options);
-    const endpointPath = sanitizePath(options.endpoint ?? "/_tincan/issues");
-    const escapedEndpoint = endpointPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     if (options.spanProcessor) {
       this.#spanProcessor = options.spanProcessor;
     } else {
@@ -48,7 +52,7 @@ export class TinCanRecorder {
         ...(options.maxAgeMs !== undefined ? { maxAgeMs: options.maxAgeMs } : {}),
         ...(options.maxEvents !== undefined ? { maxSpans: options.maxEvents } : {}),
         sanitizePath,
-        ignoreUrls: [new RegExp(`${escapedEndpoint}(?:\\?|$)`)],
+        ignoreUrls: [createTinCanEndpointPattern(options.endpoint)],
       });
       this.#spanProcessor = this.#telemetry.flightRecorder;
     }

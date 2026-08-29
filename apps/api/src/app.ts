@@ -1,5 +1,6 @@
 import { MAX_INCIDENT_BYTES } from "@tincan-webmcp/core";
 import { MemoryIssueStore } from "@tincan-webmcp/server";
+import { readFile } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,6 +22,28 @@ const json = (value: unknown, status = 200): Response => Response.json(value, {
 });
 
 const defaultStaticRoot = fileURLToPath(new URL("../../demo-saas/dist/", import.meta.url));
+
+const contentTypes: Record<string, string> = {
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+};
+
+const staticResponse = async (path: string, noStore = false): Promise<Response | undefined> => {
+  try {
+    const contents = await readFile(path);
+    const headers = new Headers({ "content-type": contentTypes[extname(path)] ?? "application/octet-stream" });
+    if (noStore) headers.set("cache-control", "no-store");
+    return new Response(contents, { headers });
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "EISDIR") return undefined;
+    throw error;
+  }
+};
 
 const parseJsonObject = async (request: Request): Promise<Record<string, unknown> | undefined> => {
   try {
@@ -147,12 +170,11 @@ export class TinCanApi {
     const childPath = relative(this.#staticRoot, requested);
     if (childPath.startsWith("..") || isAbsolute(childPath)) return json({ error: "Not found." }, 404);
 
-    const file = Bun.file(requested);
-    if (await file.exists()) return new Response(file);
+    const file = await staticResponse(requested);
+    if (file) return file;
     if (extname(decodedPath)) return json({ error: "Not found." }, 404);
 
-    const index = Bun.file(join(this.#staticRoot, "index.html"));
-    if (!(await index.exists())) return json({ error: "Not found." }, 404);
-    return new Response(index, { headers: { "cache-control": "no-store" } });
+    return await staticResponse(join(this.#staticRoot, "index.html"), true) ??
+      json({ error: "Not found." }, 404);
   }
 }
