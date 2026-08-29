@@ -3,8 +3,15 @@ import {
   type TinCanFlightRecorderSpanProcessor,
 } from "@tincan-webmcp/otel-instrumentation";
 import { DiagnosticRingBuffer, type RingBufferOptions } from "./ring-buffer";
-import { sanitizePath, sanitizeString, sanitizeValue } from "./sanitize";
-import type { DiagnosticEvent, IncidentPayload, ReportResult, ReportSiteIssueInput } from "./types";
+import {
+  sanitizePath,
+  sanitizeString,
+  sanitizeValue,
+  type DiagnosticEvent,
+  type IncidentPayload,
+  type ReportResult,
+  type ReportSiteIssueInput,
+} from "@tincan-webmcp/core";
 import type { OtelAttributes, OtelInstrumentationScope, OtelResource, OtelTelemetrySnapshot } from "@tincan-webmcp/otel";
 import { serializeIncidentPayload } from "./payload";
 import { installConsoleInstrumentation, type ConsoleInstrumentation } from "./console-instrumentation";

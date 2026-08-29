@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizePath, sanitizeString, sanitizeValue } from "./sanitize";
+import { sanitizePath, sanitizeString, sanitizeValue } from "@tincan-webmcp/core";
 
 describe("privacy sanitizer", () => {
   it("removes origins, query strings, fragments, and path identifiers", () => {

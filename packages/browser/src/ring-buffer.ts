@@ -1,4 +1,4 @@
-import type { DiagnosticEvent } from "./types";
+import type { DiagnosticEvent } from "@tincan-webmcp/core";
 import { DEFAULT_DIAGNOSTIC_WINDOW_MS } from "@tincan-webmcp/otel-instrumentation";
 
 export { DEFAULT_DIAGNOSTIC_WINDOW_MS } from "@tincan-webmcp/otel-instrumentation";

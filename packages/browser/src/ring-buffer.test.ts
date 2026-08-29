@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_DIAGNOSTIC_WINDOW_MS, DiagnosticRingBuffer } from "./ring-buffer";
-import type { DiagnosticEvent } from "./types";
+import type { DiagnosticEvent } from "@tincan-webmcp/core";
 
 const record = (timestamp: string, body: string): DiagnosticEvent => ({
   timestamp,
