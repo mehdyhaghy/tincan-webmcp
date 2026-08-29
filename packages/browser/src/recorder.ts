@@ -7,6 +7,7 @@ import { sanitizePath, sanitizeString, sanitizeValue } from "./sanitize";
 import type { DiagnosticEvent, IncidentPayload, ReportResult, ReportSiteIssueInput } from "./types";
 import type { OtelAttributes, OtelInstrumentationScope, OtelResource, OtelTelemetrySnapshot } from "@tincan-webmcp/otel";
 import { serializeIncidentPayload } from "./payload";
+import { installConsoleInstrumentation, type ConsoleInstrumentation } from "./console-instrumentation";
 
 export interface TinCanOptions extends RingBufferOptions {
   endpoint?: string;
@@ -30,8 +31,7 @@ export class TinCanRecorder {
   readonly #spanProcessor: TinCanFlightRecorderSpanProcessor;
   readonly #startedAt = new Date().toISOString();
   #started = false;
-  #originalWarn?: typeof console.warn;
-  #originalError?: typeof console.error;
+  #consoleInstrumentation?: ConsoleInstrumentation;
   #onError?: (event: ErrorEvent) => void;
   #onRejection?: (event: PromiseRejectionEvent) => void;
 
@@ -69,8 +69,8 @@ export class TinCanRecorder {
 
   stop(): void {
     if (!this.#started || typeof window === "undefined") return;
-    if (this.#originalWarn) console.warn = this.#originalWarn;
-    if (this.#originalError) console.error = this.#originalError;
+    this.#consoleInstrumentation?.stop();
+    this.#consoleInstrumentation = undefined;
     this.#telemetry?.stop();
     if (this.#onError) window.removeEventListener("error", this.#onError);
     if (this.#onRejection) window.removeEventListener("unhandledrejection", this.#onRejection);
@@ -129,16 +129,14 @@ export class TinCanRecorder {
   }
 
   #patchConsole(): void {
-    this.#originalWarn = console.warn.bind(console);
-    this.#originalError = console.error.bind(console);
-    console.warn = (...args: unknown[]) => {
-      this.record("tincan.browser.console", args.map(String).join(" "), { "log.severity": "warn" }, "warn");
-      this.#originalWarn?.(...args);
-    };
-    console.error = (...args: unknown[]) => {
-      this.record("tincan.browser.console", args.map(String).join(" "), { "log.severity": "error" }, "error");
-      this.#originalError?.(...args);
-    };
+    this.#consoleInstrumentation = installConsoleInstrumentation(console, (level, args) => {
+      this.record(
+        "tincan.browser.console",
+        args.map(String).join(" "),
+        { "log.severity": level },
+        level,
+      );
+    });
   }
 
   #telemetrySnapshot(resource: OtelResource, scope: OtelInstrumentationScope): OtelTelemetrySnapshot {
