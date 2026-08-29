@@ -81,6 +81,13 @@ const signalTotals = computed(() => issues.value.reduce((totals, issue) => {
     count + group.scopeSpans.reduce((scopeCount, scope) => scopeCount + scope.spans.length, 0), 0);
   return totals;
 }, { logs: 0, metrics: 0, spans: 0 }));
+const signalCoverage = computed(() => issues.value.reduce((coverage, issue) => {
+  const diagnostics = issue.diagnostics;
+  if (diagnostics.resourceLogs.some((group) => group.scopeLogs.some((scope) => scope.logRecords.length > 0))) coverage.logs += 1;
+  if (diagnostics.resourceMetrics.some((group) => group.scopeMetrics.some((scope) => scope.metrics.length > 0))) coverage.metrics += 1;
+  if (diagnostics.resourceSpans.some((group) => group.scopeSpans.some((scope) => scope.spans.length > 0))) coverage.spans += 1;
+  return coverage;
+}, { logs: 0, metrics: 0, spans: 0 }));
 
 function issueIdFromPath(path: string): string | undefined {
   const match = path.match(/^\/admin\/issues\/([^/]+)$/);
@@ -230,7 +237,7 @@ onUnmounted(() => window.removeEventListener("popstate", syncRoute));
         </div>
 
         <div v-if="activeTab === 'logs'" class="log-list">
-          <div v-for="record in logs" :key="record.timestamp + record.eventName" class="log-row">
+          <div v-for="(record, index) in logs" :key="`${record.timestamp}-${record.eventName}-${index}`" class="log-row">
             <time :datetime="record.timestamp">{{ formatUtcTime(record.timestamp) }}</time>
             <span class="log-severity" :data-level="record.severityText">{{ record.severityText }}</span>
             <code>{{ record.eventName }}</code>
@@ -294,12 +301,12 @@ onUnmounted(() => window.removeEventListener("popstate", syncRoute));
     <main v-else-if="page === 'signal-health'" class="workspace-page">
       <div class="crumb">Workspace / Signal health</div>
       <h1>Signal health</h1>
-      <p class="page-intro">OpenTelemetry signals currently attached to reported issues.</p>
+      <p class="page-intro">Coverage of each OpenTelemetry signal family across reported issues.</p>
       <section class="summary-grid">
-        <article><small>Issues</small><strong>{{ issues.length }}</strong></article>
-        <article><small>Logs</small><strong>{{ signalTotals.logs }}</strong></article>
-        <article><small>Metrics</small><strong>{{ signalTotals.metrics }}</strong></article>
-        <article><small>Spans</small><strong>{{ signalTotals.spans }}</strong></article>
+        <article><small>Reported issues</small><strong>{{ issues.length }}</strong></article>
+        <article><small>Issues with logs</small><strong>{{ signalCoverage.logs }}</strong></article>
+        <article><small>Issues with metrics</small><strong>{{ signalCoverage.metrics }}</strong></article>
+        <article><small>Issues with traces</small><strong>{{ signalCoverage.spans }}</strong></article>
       </section>
     </main>
 
