@@ -16,6 +16,9 @@ const categories = new Set([
   "other",
 ]);
 const severities = new Set(["info", "degraded", "blocking"]);
+const clone = (globalThis as typeof globalThis & {
+  structuredClone<T>(value: T): T;
+}).structuredClone;
 
 const failedSpanCount = (payload: IncidentPayload): number => payload.diagnostics.resourceSpans
   .flatMap((group) => group.scopeSpans.flatMap((scope) => scope.spans))
@@ -75,7 +78,7 @@ export class MemoryIssueStore {
   }
 
   list(): StoredIncident[] {
-    return JSON.parse(JSON.stringify(this.#incidents)) as StoredIncident[];
+    return clone(this.#incidents);
   }
 
   clear(): void {
