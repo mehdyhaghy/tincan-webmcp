@@ -101,4 +101,15 @@ describe("server incident preparation", () => {
     store.clear();
     expect(store.create(payload()).id).toBe("INC-1043");
   });
+
+  it("returns isolated copies from the issue store", () => {
+    const store = new MemoryIssueStore();
+    const created = store.create(payload());
+    const listed = store.list();
+    expect(listed[0]).toEqual(created);
+    expect(listed[0]).not.toBe(created);
+
+    listed[0]!.agentObservation.summary = "mutated outside the store";
+    expect(store.list()[0]!.agentObservation.summary).toBe("Wrong license total");
+  });
 });
