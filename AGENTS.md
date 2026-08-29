@@ -2,24 +2,24 @@
 
 ## Project Structure & Module Organization
 
-This Bun workspace follows the requirements in `spec.md`; the original PDF is retained as `tincan_webmcp_spec.pdf`. Use this layout:
+This Bun workspace follows `spec.md`:
 
-- `packages/browser`: framework-independent collectors, sanitizer, ring buffer, and transport.
+- `packages/core`: shared incident contracts and sanitization with no browser runtime dependency.
+- `packages/browser`: framework-independent recording, incident assembly, and transport.
 - `packages/otel-instrumentation`: official OpenTelemetry browser instrumentation, Resource Timing fallback, and bounded span processor.
-- `packages/webmcp`: the public `report_site_issue` adapter and visible browser tool registration.
-- `packages/server`: validation, re-sanitization, rate limiting, and persistence hooks.
-- `packages/otel`: OTLP-aligned log, metric, trace, resource, and scope types.
-- `apps/demo-saas`: the single Vue/Vite application, including the user site, browser agent, and admin issue routes.
+- `packages/webmcp`: `report_site_issue` registration and WebMCP types.
+- `packages/server`: validation, classification, and persistence hooks.
+- `packages/otel`: OTLP-aligned signal types.
+- `apps/demo-saas`: Vue product, developer harness, and admin routes.
 - `apps/api`: the Bun reference API and in-memory demo state.
-- Place unit tests beside source as `*.test.ts`; keep browser journeys in `tests/e2e/*.spec.ts`. Store static app assets under each app's `public/` directory.
+- Keep unit and integration tests beside source as `*.test.ts`.
 
 ## Build, Test, and Development Commands
 
 - `bun install`: install workspace dependencies.
-- `bun run dev`: start the demo, issues UI, and reference server locally.
+- `bun run dev`: start Vite and the Bun API locally.
 - `bun run build`: type-check and produce all package and app builds.
 - `bun run test`: run Vitest unit and integration suites.
-- `bun run test:e2e`: reserved for Playwright; the E2E suite is not implemented yet.
 - `bun run check:secrets`: scan repository text for high-confidence credential formats.
 
 ## Coding Style & Naming Conventions
@@ -28,15 +28,15 @@ Use TypeScript strict mode, two-space indentation, semicolons, and explicit type
 
 ## Testing Guidelines
 
-Use Vitest for units and Playwright for browser/E2E coverage. Privacy tests are release-blocking: verify redaction, body omission, payload limits, ring-buffer eviction, server-side re-sanitization, and agent-visible output containing only status plus incident ID. Add regression tests for instrumentation transparency and collector failure isolation.
+Use Vitest for unit and integration coverage. Privacy tests block release: verify redaction, body omission, payload limits, buffer eviction, server re-sanitization, instrumentation transparency, and the exact agent-visible result. Follow `docs/testing.md` for manual browser and WebMCP checks.
 
 ## Commit & Pull Request Guidelines
 
-There is no Git history to infer conventions from. Use Conventional Commits, for example `feat(browser): add bounded network collector` or `test(server): reject oversized incidents`. Keep commits focused. Pull requests should explain the user-visible effect, list verification commands, link an issue when applicable, and include screenshots or a short recording for UI changes. Call out privacy-boundary or schema changes explicitly.
+Use Conventional Commits, for example `fix(api): reject malformed JSON`. Keep commits focused. Pull requests should explain user-visible behavior, list verification, link issues, include screenshots for UI work, and call out schema or privacy changes.
 
 ## Security & Privacy
 
 Never capture bodies, credentials, storage contents, form values, DOM text, or screenshots. Treat agent prose as untrusted data, sanitize in both browser and server, and never return host diagnostics to the agent.
 
 Only add dependencies with permissive licenses approved by `docs/license-policy.md`. TinCan itself uses Apache-2.0.
-Run `bun run check:secrets` before committing or publishing. Keep credentials in ignored local environment files and provide placeholders only in `.env.example`.
+Run `bun run check:secrets` before committing or publishing. Keep credentials in ignored local environment files; this project currently requires no secrets or environment template.

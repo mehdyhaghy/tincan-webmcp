@@ -16,12 +16,12 @@ WebMCP lets agents act on a website. TinCan gives those agents a structured way 
 
 TinCan WebMCP is a privacy-safe frontend flight recorder activated by a single WebMCP reporting tool. The agent supplies semantic information - what it expected versus what it observed. The host site privately supplies technical evidence: recent logs, browser errors, network metadata, performance signals, application data, and trace correlation.
 
-The key case is a task that is technically healthy but behaviorally wrong. Monitoring may see HTTP 200, no JavaScript errors, and healthy performance while the agent sees that adding 10 licenses to an existing 10 resulted in a total of 19 instead of 20.
+The key case is a task that is technically healthy but behaviorally wrong. Monitoring may see HTTP 200, no JavaScript errors, and healthy performance while the agent sees that adding one license to an existing 10 resulted in a total of 12 instead of 11. A second case returns HTTP 504 when removing a license.
 
 ### MVP promise
 
 - One WebMCP tool: `report_site_issue`.
-- A 60-second in-memory flight recorder for host-page diagnostics.
+- A 120-second in-memory flight recorder for host-page diagnostics.
 - No raw diagnostics returned to the agent.
 - A signal-oriented Issue Details view grounded in OpenTelemetry.
 - Optional OpenTelemetry trace/request correlation.
@@ -45,29 +45,31 @@ Submission constraints: a live WebMCP-enabled app, public open-source repository
 
 ## 3. Judge-Facing Product Experience
 
-Build a polished fictional SaaS subscription portal plus a browser agent. A person can add `n` licenses through a normal product form, while the agent performs the same operation through WebMCP without clicking or reading that form. The agent receives only a user goal and WebMCP tool metadata from the website; it must not import or directly call website application functions.
+Build a polished fictional SaaS subscription portal for both human users and WebMCP agents. A person can add or remove one license with fixed UI actions, while an agent can request `n` licenses through WebMCP without clicking or reading the UI. The agent receives only a user goal and WebMCP tool metadata from the website; it must not import or directly call website application functions.
 
 | Step | Required behavior |
 | --- | --- |
 | Starting state | Business plan, 10 active licenses |
-| Human action | Enter `n` in the Add licenses form and submit the normal product operation |
-| Agent input | Natural-language goal: add 10 licenses and verify the saved result |
+| Human action | Click the fixed Add license or Remove license action |
+| Agent input | Natural-language goal: add one license, remove one license, and verify each saved result |
 | Discovery | Agent calls `getTools()` and chooses tools from names, descriptions, schemas, and annotations |
-| Agent action | Agent calls `add_licenses({ count: 10 })` using the number parsed from the goal |
-| Injected defect | Mutation claims 10 licenses were added, but persisted/read-back total becomes 19 |
-| Technical state | All API calls return 200, no JS exception, healthy performance |
-| Verification | Agent calls `get_subscription()` and observes 19 |
-| TinCan action | Agent reports expected `20 licenses` and observed `19 licenses` |
+| Agent action | Agent calls `add_licenses({ count: 1 })`, verifies, then calls `remove_licenses({ count: 1 })` and verifies again |
+| Injected defects | Add persists `n + 1`; remove returns HTTP 504 and does not change state |
+| Technical state | Add returns 200 without a JS exception; remove returns 504 |
+| Verification | Agent calls `get_subscription()` after each mutation |
+| TinCan action | Agent reports the wrong add result and removal timeout through discovered tool guidance |
 | Payoff | Issues page shows the semantic failure with host-only evidence and trace data |
 
 The agent carries user intent and compares it with structured site observations. TinCan provides the reporting channel; it does not infer the mismatch. The target site must not expose “simulate error,” “run failure,” or manual reporting controls.
 
 ```text
-User intent -> add_licenses({ count: 10 })
-            -> action returns { expectedLicenseCount: 20 }
-            -> get_subscription() returns { licenseCount: 19 }
+User intent -> add_licenses({ count: 1 })
+            -> action returns { expectedLicenseCount: 11 }
+            -> get_subscription() returns { licenseCount: 12 }
             -> agent detects mismatch
-            -> report_site_issue({ expected: "20 licenses", observed: "19 licenses" })
+            -> report_site_issue({ expected: "11 licenses", observed: "12 licenses" })
+            -> remove_licenses({ count: 1 }) returns HTTP 504
+            -> agent reports the timeout
 ```
 
 ## 4. Issue UX
@@ -122,7 +124,7 @@ Use a bounded, memory-only ring buffer. Capture safe metadata continuously and f
 | Traces | Fetch/XHR spans and optional host/backend span links | No bodies or auth/cookie headers; allowlisted trace identifiers only |
 | Application data | Host-defined providers attached as resource or event attributes | Execute only at issue time; bound size and time |
 
-Defaults: 60-second window, 500 events, 1 MB memory, 256 KB incident payload, no persistence, FIFO eviction by age/count/bytes.
+Defaults: 120-second window, 500 events, 1 MB memory, 256 KB incident payload, no persistence, FIFO eviction by age/count/bytes.
 
 ## 7. Privacy & Security Model
 
@@ -138,9 +140,10 @@ Strip URL origins, query strings, fragments, and credentials by default. Mask UU
 Single Vue Web App
 |-- Target site (`/`)
 |-- TinCan Browser SDK
-|   |-- OpenTelemetry log, metric, and span collectors
+|   |-- OpenTelemetry fetch/XHR instrumentation
+|   |-- Resource Timing fallback
 |   |-- sanitizer
-|   |-- frontend flight recorder
+|   |-- 120-second flight recorder
 |   |-- application providers
 |   |-- correlation adapter
 |   |-- incident assembler
@@ -149,6 +152,7 @@ Single Vue Web App
 |   `-- report_site_issue
 |-- Demo business tools
     |-- add_licenses
+    |-- remove_licenses
     |-- get_subscription
     `-- export_usage_report
 |-- Browser agent (`/agent`)
@@ -165,9 +169,9 @@ POST /_tincan/issues
 `-- optional OTel span/event/link
 ```
 
-Packages: `@tincan-webmcp/browser`, `@tincan-webmcp/webmcp`, `@tincan-webmcp/server`, and `@tincan-webmcp/otel`. Apps: one Vue application in `apps/demo-saas` for the target site, agent, and admin routes, plus the Bun reference API in `apps/api`.
+Packages: `@tincan-webmcp/core`, `@tincan-webmcp/browser`, `@tincan-webmcp/otel-instrumentation`, `@tincan-webmcp/webmcp`, `@tincan-webmcp/server`, and `@tincan-webmcp/otel`. Apps: one Vue application in `apps/demo-saas` for the target site, developer harness, and admin routes, plus the Bun reference API in `apps/api`.
 
-Browser functionality must remain framework-independent. Use strict TypeScript. The demo stack may use Vite with a frontend framework, a reference server, Vitest, and Playwright.
+Browser functionality must remain framework-independent. Use strict TypeScript. The demo stack may use Vite with a frontend framework, a reference server, and Vitest.
 
 ## 9. Incident Model & Semantic Classification
 
@@ -197,14 +201,14 @@ type TinCanIncident = {
 const semanticOnly =
   issue.severity !== "info" &&
   jsErrorCount === 0 &&
-  failedNetworkCount === 0;
+  failedSpanCount === 0;
 ```
 
 ## 10. Backend & OpenTelemetry
 
 `POST /_tincan/issues` uses JSON and same-origin credentials. Validate schema and content type, enforce a 256 KB body limit and rate limit, re-sanitize sensitive data, generate a server incident ID and stable fingerprint, classify `semanticOnly`, and persist through a callback. The SDK does not require a database.
 
-OpenTelemetry export is optional, but the internal diagnostics model always follows OTLP shapes for logs, metrics, and traces. Consume an existing provider when installed instead of initializing a competing provider. Safe attributes include category, severity, service name/version, deployment environment, and URL path. Free-form agent prose belongs in LogRecord bodies or span events, never metric attributes. If an originating span exists, link the issue span to it; do not manufacture trace ancestry.
+OpenTelemetry export is optional, but the internal diagnostics model always follows OTLP shapes for logs, metrics, and traces. The browser integration uses the official fetch and XHR instrumentations plus a passive Resource Timing fallback for requests made from an unpatched realm. It retains only sanitized span fields for 120 seconds. Consume an existing provider when installed instead of initializing a competing provider. Safe attributes include category, severity, service name/version, deployment environment, URL path, HTTP method, response status, and duration. Free-form agent prose belongs in LogRecord bodies or span events, never metric attributes. If an originating span exists, link the issue span to it; do not manufacture trace ancestry.
 
 ## 11. Build Plan
 
@@ -226,9 +230,10 @@ Prioritize the end-to-end contest story before SDK breadth.
 - `report_site_issue` is discoverable in a WebMCP-capable browser.
 - The browser agent starts only with a user goal and discovered WebMCP metadata; it does not import target-site functions or operate visible UI controls.
 - The target site contains no scripted failure or manual reporting controls.
-- Adding 10 licenses through `add_licenses({ count: 10 })` produces an expected total of 20 and a persisted total of 19.
-- The same `n`-license operation is available through the website form and WebMCP.
-- The 20-to-19 demo creates an issue with HTTP 200 everywhere and zero JS exceptions.
+- Adding one license through `add_licenses({ count: 1 })` produces an expected total of 11 and a persisted total of 12.
+- Removing one license through `remove_licenses({ count: 1 })` returns HTTP 504 and leaves the persisted total unchanged.
+- The same add and remove operations are available as fixed one-license actions in the human UI.
+- The 11-to-12 demo creates an issue with HTTP 200 everywhere and zero JS exceptions.
 - The agent receives only status and incident ID.
 - Authorization, cookies, JWTs, API keys, passwords, payment-card-like values, and URL query secrets are redacted.
 - Request and response bodies never appear in diagnostic payloads.
@@ -238,11 +243,11 @@ Prioritize the end-to-end contest story before SDK breadth.
 - The server validates and re-sanitizes independently.
 - The live demo has a one-click Reset Demo action.
 
-Use Vitest for units, Playwright for browser/E2E tests, and strict TypeScript. Privacy tests block release.
+Use Vitest for unit and integration tests, strict TypeScript, and a documented manual WebMCP browser check. Privacy tests block release.
 
 ## 13. Demo Video Plan
 
-Target 2:30-2:45. Open with the problem, show that a person can add a parameterized number of licenses, enter the equivalent goal in the browser agent, show it discover and invoke `add_licenses` without clicking the UI, verify the persisted value is 19, conditionally call TinCan, inspect the Issue Details evidence, show the single-app architecture, and close on "Semantic observability for the agentic web."
+Target 2:30-2:45. Open with the problem, show the fixed human add/remove actions, then give the canonical browser agent the combined goal. Show `add_licenses`, `get_subscription`, `remove_licenses`, and any agent-selected reporting calls in Site tools → Recently used. Verify the incorrect 12-license add result and the removal timeout, inspect both Issue Details views and their OpenTelemetry evidence, show the single-process architecture, and close on "Semantic observability for the agentic web."
 
 ## 14. Submission Checklist
 
@@ -265,7 +270,7 @@ User intent
   -> agent detects semantic mismatch
   -> report_site_issue
   -> host recorder snapshots private evidence
-  -> Issue Details: Expected 20 licenses / Observed 19 licenses
+  -> Issue Details: Expected 11 licenses / Observed 12 licenses
   -> captured browser evidence and any explicitly linked trace context
 ```
 

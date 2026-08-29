@@ -24,7 +24,7 @@ bun run test
 bun run build
 ```
 
-Playwright is installed, but the E2E suite is not implemented yet. Add browser tests under `tests/e2e/*.spec.ts` when changing an end-to-end flow.
+For browser-facing changes, also follow the manual UI and WebMCP checks in [docs/testing.md](docs/testing.md). The repository intentionally keeps browser-agent verification manual because the canonical flow depends on a WebMCP-capable agent environment.
 
 ## Code conventions
 

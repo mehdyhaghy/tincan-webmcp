@@ -51,6 +51,8 @@ Successful agent-visible result:
 
 Raw logs, metrics, spans, request data, trace identifiers, and application state are never included in this result.
 
+The imperative WebMCP callback returns this object directly. The current draft accepts any callback result and stringifies it for `executeTool()`; an MCP transport-style `{ content: [...] }` envelope is not used.
+
 ## Demo business tools
 
 ### `add_licenses`
@@ -58,10 +60,20 @@ Raw logs, metrics, spans, request data, trace identifiers, and application state
 Input:
 
 ```json
-{"count":10}
+{"count":1}
 ```
 
-The tool adds `count` new user licenses. It calls the same endpoint as the website's **Add licenses** form. In the canonical demo, starting from 10 and adding 10 returns a successful result with `expectedLicenseCount: 20`, even though the server deliberately persists 19.
+The tool adds `count` new user licenses. It calls the same endpoint as the website's **Add license** button. In the canonical demo, starting from 10 and adding 1 returns a successful result with `expectedLicenseCount: 11`, even though the server deliberately persists 12.
+
+### `remove_licenses`
+
+Input:
+
+```json
+{"count":1}
+```
+
+The tool calls the same endpoint as **Remove license**. The demo deliberately returns HTTP `504` and leaves the persisted license count unchanged.
 
 ### `get_subscription`
 

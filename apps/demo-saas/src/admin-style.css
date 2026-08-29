@@ -12,8 +12,7 @@ header { grid-column: 1 / -1; display: flex; align-items: center; justify-conten
 .header-actions { display: flex; gap: 16px; align-items: center; }
 .header-actions button { padding: 7px 11px; border: 1px solid #394255; border-radius: 7px; background: #1b2332; color: #d0d5dd; }
 .site-switch { padding: 7px 11px; border: 1px solid #6d5dfc; border-radius: 7px; color: #fff; background: #5b4cf4; font-size: 12px; font-weight: 700; text-decoration: none; }
-.live { color: #aeb6c5; font-size: 12px; }
-.live b { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #37c879; box-shadow: 0 0 0 4px rgba(55,200,121,.12); }
+.refresh-mode { color: #aeb6c5; font-size: 12px; }
 aside { padding: 26px 14px; background: #f2f3f5; border-right: 1px solid #dfe2e7; }
 .nav-label { margin: 0 10px 8px; color: #98a2b3; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 nav { display: grid; gap: 3px; }
@@ -111,7 +110,7 @@ code { font-family: "DM Mono", monospace; }
   .app-shell { display: block; }
   header { height: 66px; padding: 0 14px; }
   .header-actions { gap: 8px; }
-  .live { display: none; }
+  .refresh-mode { display: none; }
   .brand i { display: none; }
   aside { display: none; }
   main { padding: 28px 18px; }

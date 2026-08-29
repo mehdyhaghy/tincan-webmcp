@@ -31,7 +31,7 @@ The browser sanitizer:
 - detects bearer tokens, JWT-like strings, payment-card-like values, and private-key markers;
 - bounds strings, arrays, object entries, and nesting depth.
 
-The server sanitizes the complete incident again after schema validation. Browser sanitization is never treated as the only protection.
+The server sanitizes the complete incident again after schema validation. Browser sanitization is never treated as the only protection. Up to 500 evidence items are preserved per signal array; structural truncation is recorded in `diagnostics.truncated`.
 
 ## Resource limits
 
@@ -44,7 +44,7 @@ The server sanitizes the complete incident again after schema validation. Browse
 | Ingestion rate limit | 10 reports per address per minute |
 | Persistence | Process memory only |
 
-The recorder evicts oldest entries by age, count, and bytes. A single record larger than the byte budget is discarded.
+The recorder evicts oldest entries by age, count, and bytes. A single record larger than the byte budget is discarded. Before transport, the browser removes the oldest logs or spans until the serialized incident fits the 256 KB request limit and sets `diagnostics.truncated`.
 
 ## Agent-visible response
 

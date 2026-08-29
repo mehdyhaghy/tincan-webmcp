@@ -8,6 +8,7 @@ The editable diagram is available in [Draw.io format](architecture.drawio).
 
 ## Workspace packages
 
+- `@tincan-webmcp/core` provides shared incident contracts and server-safe sanitization without browser dependencies.
 - `@tincan-webmcp/browser` provides incident assembly, sanitization, bounded logs and metrics, and HTTP transport.
 - `@tincan-webmcp/otel-instrumentation` integrates official OpenTelemetry fetch and XHR instrumentation, adds the Resource Timing fallback, and retains spans for 120 seconds.
 - `@tincan-webmcp/webmcp` registers `report_site_issue` through the document-scoped WebMCP API.

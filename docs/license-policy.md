@@ -9,4 +9,4 @@ Before adding or upgrading a dependency:
 3. Do not add copyleft, source-available, non-commercial, or license-ambiguous components without explicit maintainer approval.
 4. Record required attribution in a notice file before distribution.
 
-The direct dependency set was checked on August 28, 2026. Vue, Vite, Vitest, the Vue Vite plugin, Vue TypeScript tooling, and Bun type definitions declare MIT. TypeScript, Playwright, and the official OpenTelemetry API, SDK, resources, and browser instrumentation packages declare Apache-2.0.
+The direct dependency set was checked on August 28, 2026. Vue, Vite, Vitest, the Vue Vite plugin, Vue TypeScript tooling, and Bun type definitions declare MIT. TypeScript and the official OpenTelemetry API, SDK, resources, and browser instrumentation packages declare Apache-2.0.

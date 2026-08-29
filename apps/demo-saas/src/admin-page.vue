@@ -141,7 +141,7 @@ onUnmounted(() => window.removeEventListener("popstate", syncRoute));
     <header>
       <a class="brand" href="/admin/overview"><span class="brand-mark">T</span><strong>TinCan</strong><i>signals</i></a>
       <div class="header-actions">
-        <span class="live"><b /> Live</span>
+        <span class="refresh-mode">Manual refresh</span>
         <a class="site-switch" href="/">Open site <span>↗</span></a>
         <button type="button" @click="loadIssues">Refresh</button>
       </div>

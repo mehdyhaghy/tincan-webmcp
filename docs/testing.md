@@ -32,15 +32,15 @@ agents, but does not establish that every Chrome extension supports WebMCP.
 ## Browser agent flow
 
 1. Open `http://127.0.0.1:5173/` in a WebMCP-capable browser and click **Reset demo**.
-2. Confirm the normal product form accepts a number from 1 to 100 and offers **Add licenses**. This form and the agent tool call the same API operation.
+2. Confirm the product UI offers fixed **Add license** and **Remove license** actions. Each button and its corresponding agent tool call the same API operation.
 3. Open `http://127.0.0.1:5173/agent`.
-4. Keep the default goal: “Add 10 licenses to the subscription and verify the saved result.”
+4. Keep the default goal: “Add 1 license to the subscription and verify the saved result.”
 5. Click **Run browser agent**.
-6. Confirm the agent discovers the site's tools without clicking the product UI, selects `add_licenses`, passes `{ count: 10 }`, invokes `get_subscription`, and detects an expected total of 20 but a saved total of 19.
+6. Confirm the agent discovers the site's tools without clicking the product UI, selects `add_licenses`, passes `{ count: 1 }`, invokes `get_subscription`, and detects an expected total of 11 but a saved total of 12.
 7. Confirm the agent then discovers and calls `report_site_issue`; the target site shows agent-detected and report-success notifications.
 8. Open `http://127.0.0.1:5173/admin/issues` and inspect the resulting issue, Logs, Metrics, Traces, and full submitted payload.
 
-To exercise a different tool result, change the agent goal to “Export the usage report” and run it again. The agent should select `export_usage_report`, observe HTTP `504`, and call TinCan with a network-failure report.
+To exercise the network failure, reset the demo, change the goal to “Remove 1 license from the subscription,” and run it again. The agent should select `remove_licenses`, observe HTTP `504`, and call TinCan with a network-failure report.
 
 The target website never invokes its own tools, injects a scripted browser-side flow, or decides to report. It only implements the business behavior and exposes WebMCP tools. The agent owns tool selection, verification, failure detection, and the decision to call TinCan.
 
@@ -62,7 +62,7 @@ tools.map((tool) => tool.name);
 Expected tool names:
 
 ```js
-["report_site_issue", "add_licenses", "get_subscription", "export_usage_report"]
+["report_site_issue", "add_licenses", "get_subscription", "remove_licenses", "export_usage_report"]
 ```
 
 Execute the business operation and verify its persisted result:
@@ -72,38 +72,30 @@ const tool = (name) => tools.find((candidate) => candidate.name === name);
 
 await document.modelContext.executeTool(
   tool("add_licenses"),
-  JSON.stringify({ count: 10 }),
+  JSON.stringify({ count: 1 }),
 );
 
 await document.modelContext.executeTool(tool("get_subscription"), "{}");
 ```
 
-The action result reports `expectedLicenseCount: 20`, while the read-back call returns `licenseCount: 19`. Report the mismatch:
+The action result reports `expectedLicenseCount: 11`, while the read-back call returns `licenseCount: 12`. Report the mismatch:
 
 ```js
 await document.modelContext.executeTool(tool("report_site_issue"), JSON.stringify({
   category: "wrong_result",
   severity: "blocking",
   summary: "Adding licenses produced an incorrect total",
-  expected: "20 licenses",
-  observed: "19 licenses",
+  expected: "11 licenses",
+  observed: "12 licenses",
   operation: "add_licenses",
 }));
 ```
 
 If `document.modelContext` is undefined, confirm the browser supports the latest draft API, the testing flag is enabled, and the page is loaded from localhost or another secure origin. The current API baseline is the [WebMCP Draft Community Group Report](https://webmachinelearning.github.io/webmcp/).
 
-## API smoke checks
+## UI smoke checks
 
-```bash
-curl -X POST http://127.0.0.1:8787/api/reset
-curl -X POST http://127.0.0.1:8787/api/licenses \
-  -H 'content-type: application/json' \
-  -d '{"count":10}'
-curl http://127.0.0.1:8787/api/subscription
-```
-
-The action response should contain `"expectedLicenseCount":20`, and the final subscription response should contain `"licenseCount":19`. Use the UI or WebMCP flow to test issue ingestion because it produces the complete diagnostic payload.
+On `/`, click **Reset demo**, then **Add license**. The count should incorrectly move from 10 to 12. Reset again and click **Remove license**; an HTTP `504` notification should appear and the count should remain 10. Use the WebMCP flow to create incidents because only the agent decides when `report_site_issue` is appropriate.
 
 ## Automated checks
 
@@ -114,7 +106,7 @@ bun run test
 bun run build
 ```
 
-The current suite contains nine Vitest tests covering sanitization, ring-buffer eviction, server validation, semantic-only classification, and preservation of nested signal data. `bun run test:e2e` is reserved for Playwright, but no E2E tests are committed yet.
+The Vitest suite covers sanitization, payload limits, recorder assembly, OpenTelemetry span conversion and deduplication, console transparency, WebMCP output privacy, API error paths, server classification, and static SPA serving. GitHub Actions runs the secret, type, test, and build checks. Browser-agent behavior remains a manual check because it depends on a WebMCP-capable browser and agent environment.
 
 ## Troubleshooting
 
