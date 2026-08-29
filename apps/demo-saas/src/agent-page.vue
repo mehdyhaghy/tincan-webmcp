@@ -1,18 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-interface RegisteredTool {
-  name: string;
-  title?: string;
-  description: string;
-  inputSchema: string | Record<string, unknown>;
-  annotations?: { readOnlyHint?: boolean };
-}
-
-interface ModelContext {
-  getTools(): Promise<RegisteredTool[]>;
-  executeTool(tool: RegisteredTool, inputArguments?: string): Promise<string>;
-}
+type RegisteredTool = RegisteredModelContextTool;
 
 interface AgentStep {
   id: number;
@@ -86,7 +75,7 @@ async function runAgent(): Promise<void> {
   steps.value = [];
   discoveredTools.value = [];
   try {
-    const model = (document as Document & { modelContext?: ModelContext }).modelContext;
+    const model = document.modelContext;
     if (!model) throw new Error("This browser does not expose WebMCP. Enable Chrome's WebMCP testing flag and reload.");
 
     addStep("Read goal", goal.value);

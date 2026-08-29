@@ -9,15 +9,6 @@ interface Subscription {
   status: string;
 }
 
-interface ToolDefinition {
-  name: string;
-  title: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  annotations?: { readOnlyHint?: boolean; untrustedContentHint?: boolean };
-  execute(input: unknown): Promise<unknown>;
-}
-
 interface Notification {
   id: number;
   title: string;
@@ -157,12 +148,10 @@ async function resetDemo(): Promise<void> {
 }
 
 async function registerBusinessTools(): Promise<boolean> {
-  const model = (document as Document & {
-    modelContext?: { registerTool(tool: ToolDefinition, options?: { signal?: AbortSignal }): Promise<void> };
-  }).modelContext;
+  const model = document.modelContext;
   if (!model) return false;
 
-  const tools: ToolDefinition[] = [
+  const tools: ModelContextTool[] = [
     {
       name: "add_licenses",
       title: "Add licenses",

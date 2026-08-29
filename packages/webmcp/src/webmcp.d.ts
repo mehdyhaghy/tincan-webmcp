@@ -7,21 +7,32 @@ declare global {
     description: string;
     inputSchema: Record<string, unknown>;
     annotations?: { readOnlyHint?: boolean; untrustedContentHint?: boolean };
-    execute(input: unknown, options?: { signal?: AbortSignal }): unknown | Promise<unknown>;
+    execute(input: Record<string, unknown>, options: { signal: AbortSignal }): unknown | Promise<unknown>;
+  }
+
+  interface ModelContextRegisterToolOptions {
+    exposedTo?: string[];
+    signal?: AbortSignal;
   }
 
   interface ModelContext {
-    registerTool(tool: ModelContextTool, options?: { signal?: AbortSignal }): Promise<void>;
+    registerTool(tool: ModelContextTool, options?: ModelContextRegisterToolOptions): Promise<void>;
     getTools(options?: { fromOrigins?: string[] }): Promise<RegisteredModelContextTool[]>;
-    executeTool(tool: RegisteredModelContextTool, inputArguments?: string, options?: { signal?: AbortSignal }): Promise<string>;
+    executeTool(
+      tool: RegisteredModelContextTool,
+      inputArguments?: Record<string, unknown> | string,
+      options?: { signal?: AbortSignal },
+    ): Promise<string>;
   }
 
   interface RegisteredModelContextTool {
     name: string;
     title?: string;
     description: string;
-    inputSchema: string;
+    inputSchema: Record<string, unknown> | string;
     annotations?: { readOnlyHint?: boolean; untrustedContentHint?: boolean };
+    origin?: string;
+    window?: Window;
   }
 
   interface Document {

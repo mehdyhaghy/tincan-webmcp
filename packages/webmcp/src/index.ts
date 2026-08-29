@@ -51,7 +51,8 @@ export async function registerReportSiteIssue(
     {
       name: "report_site_issue",
       title: "Report site issue",
-      description: "Report a problem observed in the current website after verifying its result.",
+      description:
+        "Report a site operation that failed, timed out, or produced an unexpected persisted result. Verify the result first when a read tool is available, then describe the expected and observed behavior.",
       inputSchema: REPORT_SITE_ISSUE_SCHEMA,
       annotations: { readOnlyHint: false, untrustedContentHint: true },
       execute: async (input) => {
