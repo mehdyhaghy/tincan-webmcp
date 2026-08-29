@@ -32,6 +32,13 @@ afterEach(async () => {
 });
 
 describe("TinCan API", () => {
+  it("supports HEAD health checks for the subscription endpoint", async () => {
+    const api = new TinCanApi();
+    const response = await api.fetch(new Request("http://test/api/subscription", { method: "HEAD" }));
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
+  });
+
   it("returns 400 for malformed business JSON", async () => {
     const api = new TinCanApi();
     const response = await api.fetch(new Request("http://test/api/licenses", {
@@ -72,6 +79,16 @@ describe("TinCan API", () => {
     expect(await (await api.fetch(issueRequest())).json()).toMatchObject({ incidentId: "INC-1042" });
     await api.fetch(new Request("http://test/api/reset", { method: "POST" }));
     expect(await (await api.fetch(issueRequest())).json()).toMatchObject({ incidentId: "INC-1043" });
+  });
+
+  it("returns submitted incidents through the admin API", async () => {
+    const api = new TinCanApi();
+    expect((await api.fetch(issueRequest())).status).toBe(201);
+    const response = await api.fetch(new Request("http://test/api/issues"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      issues: [{ id: "INC-1042", agentObservation: { summary: "Wrong result" } }],
+    });
   });
 
   it("serves static assets and falls back to the SPA entry point", async () => {

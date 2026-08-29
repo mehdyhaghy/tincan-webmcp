@@ -92,7 +92,12 @@ export class TinCanApi {
   async fetch(request: Request, address = "unknown"): Promise<Response> {
     const url = new URL(request.url);
 
-    if (url.pathname === "/api/subscription" && request.method === "GET") return json(this.#subscription);
+    if (url.pathname === "/api/subscription" && (request.method === "GET" || request.method === "HEAD")) {
+      const response = json(this.#subscription);
+      return request.method === "HEAD"
+        ? new Response(null, { status: response.status, headers: response.headers })
+        : response;
+    }
 
     if (url.pathname === "/api/licenses" && request.method === "POST") {
       const body = await parseJsonObject(request);
