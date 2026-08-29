@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IncidentPayload } from "@tincan-webmcp/core";
-import { prepareIncident } from "./index";
+import { MemoryIssueStore, prepareIncident } from "./index";
 
 const payload = (): IncidentPayload => ({
   schemaVersion: "1.0",
@@ -93,5 +93,12 @@ describe("server incident preparation", () => {
     const input = payload();
     input.agentObservation.summary = "x".repeat(301);
     expect(() => prepareIncident(input, 1)).toThrow("Invalid issue summary");
+  });
+
+  it("keeps incident IDs monotonic when stored issues are cleared", () => {
+    const store = new MemoryIssueStore();
+    expect(store.create(payload()).id).toBe("INC-1042");
+    store.clear();
+    expect(store.create(payload()).id).toBe("INC-1043");
   });
 });

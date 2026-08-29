@@ -65,9 +65,11 @@ export function prepareIncident(input: unknown, sequence: number): StoredInciden
 
 export class MemoryIssueStore {
   readonly #incidents: StoredIncident[] = [];
+  #nextSequence = 1;
 
   create(payload: unknown): StoredIncident {
-    const incident = prepareIncident(payload, this.#incidents.length + 1);
+    const incident = prepareIncident(payload, this.#nextSequence);
+    this.#nextSequence += 1;
     this.#incidents.unshift(incident);
     return incident;
   }

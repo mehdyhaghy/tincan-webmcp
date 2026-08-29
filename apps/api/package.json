@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@tincan-webmcp/core": "workspace:*",
     "@tincan-webmcp/server": "workspace:*"
   }
 }
