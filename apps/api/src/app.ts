@@ -18,24 +18,43 @@ export interface TinCanApiOptions {
 
 const json = (value: unknown, status = 200): Response => Response.json(value, {
   status,
-  headers: { "cache-control": "no-store" },
+  headers: {
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+  },
 });
 
 const defaultStaticRoot = fileURLToPath(new URL("../../demo-saas/dist/", import.meta.url));
 
 const contentTypes: Record<string, string> = {
+  ".avif": "image/avif",
   ".css": "text/css; charset=utf-8",
+  ".gif": "image/gif",
   ".html": "text/html; charset=utf-8",
+  ".ico": "image/x-icon",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".map": "application/json; charset=utf-8",
   ".png": "image/png",
   ".svg": "image/svg+xml",
+  ".txt": "text/plain; charset=utf-8",
+  ".wasm": "application/wasm",
+  ".webmanifest": "application/manifest+json",
+  ".webp": "image/webp",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".xml": "application/xml; charset=utf-8",
 };
 
 const staticResponse = async (path: string, noStore = false): Promise<Response | undefined> => {
   try {
     const contents = await readFile(path);
-    const headers = new Headers({ "content-type": contentTypes[extname(path)] ?? "application/octet-stream" });
+    const headers = new Headers({
+      "content-type": contentTypes[extname(path).toLowerCase()] ?? "application/octet-stream",
+      "x-content-type-options": "nosniff",
+    });
     if (noStore) headers.set("cache-control", "no-store");
     return new Response(contents, { headers });
   } catch (error) {

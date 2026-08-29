@@ -80,11 +80,15 @@ describe("TinCan API", () => {
     await mkdir(join(root, "assets"));
     await writeFile(join(root, "index.html"), "<main>TinCan app</main>");
     await writeFile(join(root, "assets", "app.js"), "export const ready = true;");
+    await writeFile(join(root, "assets", "brand.woff2"), "font-data");
     const api = new TinCanApi({ staticRoot: root });
 
     const deepLink = await api.fetch(new Request("http://test/admin/issues/INC-1042"));
     expect(await deepLink.text()).toContain("TinCan app");
     const asset = await api.fetch(new Request("http://test/assets/app.js"));
     expect(await asset.text()).toContain("ready = true");
+    expect(asset.headers.get("x-content-type-options")).toBe("nosniff");
+    const font = await api.fetch(new Request("http://test/assets/brand.woff2"));
+    expect(font.headers.get("content-type")).toBe("font/woff2");
   });
 });
