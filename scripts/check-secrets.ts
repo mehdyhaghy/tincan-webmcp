@@ -6,8 +6,6 @@ const ignoredDirectories = new Set([
   "node_modules",
   "dist",
   "coverage",
-  "playwright-report",
-  "test-results",
 ]);
 
 const rules: Array<{ name: string; pattern: RegExp }> = [

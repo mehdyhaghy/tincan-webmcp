@@ -5,15 +5,12 @@ node_modules/
 # Build and test output
 dist/
 coverage/
-playwright-report/
-test-results/
 *.tsbuildinfo
 *.log
 
 # Local environment and runtime configuration
 .env
 .env.*
-!.env.example
 .dev.vars
 .dev.vars.*
 *.local
