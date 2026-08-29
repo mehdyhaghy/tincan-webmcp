@@ -28,7 +28,7 @@ The browser sanitizer:
 - removes URL origins, queries, fragments, and credentials;
 - masks UUIDs and long numeric path segments;
 - redacts sensitive object keys recursively;
-- detects bearer tokens, JWT-like strings, payment-card-like values, and private-key markers;
+- detects bearer tokens, JWT-like strings, Luhn-valid payment-card candidates, and private-key markers; non-card numeric runs such as order numbers and epoch timestamps are preserved;
 - bounds strings, arrays, object entries, and nesting depth.
 
 The server sanitizes the complete incident again after schema validation. Browser sanitization is never treated as the only protection. Up to 500 evidence items are preserved per signal array; structural truncation is recorded in `diagnostics.truncated`.
