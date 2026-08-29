@@ -75,12 +75,15 @@ describe("TinCan API", () => {
   });
 
   it("serves static assets and falls back to the SPA entry point", async () => {
-    const root = await mkdtemp(join(tmpdir(), "tincan-api-test-"));
-    temporaryRoots.push(root);
+    const outerRoot = await mkdtemp(join(tmpdir(), "tincan-api-test-"));
+    const root = join(outerRoot, "public");
+    temporaryRoots.push(outerRoot);
+    await mkdir(root);
     await mkdir(join(root, "assets"));
     await writeFile(join(root, "index.html"), "<main>TinCan app</main>");
     await writeFile(join(root, "assets", "app.js"), "export const ready = true;");
     await writeFile(join(root, "assets", "brand.woff2"), "font-data");
+    await writeFile(join(outerRoot, "secret.txt"), "must not be served");
     const api = new TinCanApi({ staticRoot: root });
 
     const deepLink = await api.fetch(new Request("http://test/admin/issues/INC-1042"));
@@ -90,5 +93,8 @@ describe("TinCan API", () => {
     expect(asset.headers.get("x-content-type-options")).toBe("nosniff");
     const font = await api.fetch(new Request("http://test/assets/brand.woff2"));
     expect(font.headers.get("content-type")).toBe("font/woff2");
+    const traversal = await api.fetch(new Request("http://test/%2e%2e%2fsecret.txt"));
+    expect(traversal.status).toBe(404);
+    expect(await traversal.text()).not.toContain("must not be served");
   });
 });
