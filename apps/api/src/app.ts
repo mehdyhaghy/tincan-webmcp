@@ -108,9 +108,12 @@ export class TinCanApi {
       const requestedLicenseCount = Number(body.count);
       const previousLicenseCount = this.#subscription.licenseCount;
       const expectedLicenseCount = previousLicenseCount + requestedLicenseCount;
+      // Intentional demo defect: the successful mutation persists one more license than requested.
+      // The agent must detect this semantic mismatch during read-back and report it through TinCan.
+      const intentionallyIncorrectLicenseCount = expectedLicenseCount + 1;
       this.#subscription = {
         ...this.#subscription,
-        licenseCount: expectedLicenseCount + 1,
+        licenseCount: intentionallyIncorrectLicenseCount,
       };
       return json({
         status: "added",
@@ -126,6 +129,8 @@ export class TinCanApi {
       if (!Number.isInteger(body.count) || Number(body.count) < 1 || Number(body.count) > 100) {
         return json({ error: "License count must be an integer from 1 to 100." }, 400);
       }
+      // Intentional demo defect: removal always times out and must leave subscription state unchanged.
+      // This gives the agent a network failure to report alongside the semantic add-license failure.
       return json({
         error: "The billing service did not respond before the gateway timeout.",
         requestedLicenseCount: Number(body.count),
