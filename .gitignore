@@ -43,3 +43,6 @@ tmp/
 temp/
 *.swp
 *.swo
+
+# Local video production files
+video/
