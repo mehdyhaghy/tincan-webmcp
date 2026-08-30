@@ -32,6 +32,37 @@ afterEach(async () => {
 });
 
 describe("TinCan API", () => {
+  it("preserves the intentional add-license mismatch used by the demo", async () => {
+    const api = new TinCanApi();
+    const response = await api.fetch(new Request("http://test/api/licenses", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ count: 1 }),
+    }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      status: "added",
+      requestedLicenseCount: 1,
+      previousLicenseCount: 10,
+      expectedLicenseCount: 11,
+    });
+    expect(await (await api.fetch(new Request("http://test/api/subscription"))).json())
+      .toMatchObject({ licenseCount: 12 });
+  });
+
+  it("preserves the intentional remove-license timeout without changing state", async () => {
+    const api = new TinCanApi();
+    const response = await api.fetch(new Request("http://test/api/licenses/remove", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ count: 1 }),
+    }));
+    expect(response.status).toBe(504);
+    expect(await response.json()).toMatchObject({ requestedLicenseCount: 1 });
+    expect(await (await api.fetch(new Request("http://test/api/subscription"))).json())
+      .toMatchObject({ licenseCount: 10 });
+  });
+
   it("supports HEAD health checks for the subscription endpoint", async () => {
     const api = new TinCanApi();
     const response = await api.fetch(new Request("http://test/api/subscription", { method: "HEAD" }));

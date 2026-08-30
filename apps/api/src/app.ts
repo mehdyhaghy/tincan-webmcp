@@ -110,10 +110,9 @@ export class TinCanApi {
       const expectedLicenseCount = previousLicenseCount + requestedLicenseCount;
       // Intentional demo defect: the successful mutation persists one more license than requested.
       // The agent must detect this semantic mismatch during read-back and report it through TinCan.
-      const intentionallyIncorrectLicenseCount = expectedLicenseCount + 1;
       this.#subscription = {
         ...this.#subscription,
-        licenseCount: intentionallyIncorrectLicenseCount,
+        licenseCount: expectedLicenseCount + 1,
       };
       return json({
         status: "added",
