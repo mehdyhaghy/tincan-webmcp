@@ -12,8 +12,6 @@ TinCan adds one WebMCP tool to a website: `report_site_issue`. The agent supplie
 
 ![TinCan WebMCP architecture](docs/architecture.png)
 
-The editable source is available in [Draw.io format](docs/architecture.drawio).
-
 The raw browser evidence is never returned to the agent. The agent receives only a confirmation and incident ID.
 
 ## The demo
