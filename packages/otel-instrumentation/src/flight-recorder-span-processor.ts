@@ -100,6 +100,25 @@ export class TinCanFlightRecorderSpanProcessor implements SpanProcessor {
     return structuredClone(this.#spans.map(({ span }) => span));
   }
 
+  /** Re-adds spans that were persisted by an earlier page instance, oldest first. */
+  restore(spans: readonly OtelSpan[], now = Date.now()): void {
+    for (const span of spans) {
+      const startTimestamp = Date.parse(span.startTime);
+      const endTimestamp = Date.parse(span.endTime);
+      if (!Number.isFinite(startTimestamp) || !Number.isFinite(endTimestamp)) continue;
+      const source = span.attributes["tincan.capture.source"];
+      this.#spans.push({
+        span: structuredClone(span),
+        path: String(span.attributes["url.path"] ?? "/"),
+        ...(source !== undefined ? { source } : {}),
+        startTimestamp,
+        endTimestamp,
+      });
+    }
+    this.#spans.sort((left, right) => left.endTimestamp - right.endTimestamp);
+    this.#prune(now);
+  }
+
   hasMatchingRequest(path: string, startTimestamp: number): boolean {
     return this.#spans.some((span) =>
       span.path === path && Math.abs(span.startTimestamp - startTimestamp) < 250,

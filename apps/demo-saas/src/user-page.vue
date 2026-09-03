@@ -2,6 +2,7 @@
 import { createTinCan } from "@tincan-webmcp/browser";
 import { registerReportSiteIssue } from "@tincan-webmcp/webmcp";
 import { onBeforeUnmount, onMounted, ref } from "vue";
+import { sessionFetch } from "./session";
 
 interface Subscription {
   plan: string;
@@ -36,7 +37,11 @@ let nextActivityId = 1;
 
 const recorder = createTinCan({
   application: { name: "acme-saas", version: "1.4.2", environment: "production" },
+  fetch: sessionFetch,
+  // Browser agents may reload the page between tool calls; keep the evidence window.
+  persistence: { key: "tincan:acme-saas:flight-recorder" },
 });
+const UI_STATE_KEY = "tincan:acme-saas:ui";
 const registration = new AbortController();
 
 function showNotification(title: string, message: string, tone: Notification["tone"]): void {
@@ -56,6 +61,43 @@ function clearNotifications(): void {
 function addActivity(title: string, detail: string, tone: AgentActivity["tone"]): void {
   activity.value.unshift({ id: nextActivityId++, timestamp: new Date().toISOString(), title, detail, tone });
   activity.value = activity.value.slice(0, 12);
+  saveUiState();
+}
+
+interface PersistedUiState {
+  activity: AgentActivity[];
+  latestIncidentId: string;
+  nextActivityId: number;
+}
+
+function saveUiState(): void {
+  try {
+    const state: PersistedUiState = { activity: activity.value, latestIncidentId: latestIncidentId.value, nextActivityId };
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // Storage unavailable: the page still works, it just starts blank after a reload.
+  }
+}
+
+function restoreUiState(): void {
+  try {
+    const raw = localStorage.getItem(UI_STATE_KEY);
+    if (!raw) return;
+    const state = JSON.parse(raw) as Partial<PersistedUiState>;
+    if (Array.isArray(state.activity)) activity.value = state.activity.slice(0, 12);
+    if (typeof state.latestIncidentId === "string") latestIncidentId.value = state.latestIncidentId;
+    if (typeof state.nextActivityId === "number") nextActivityId = state.nextActivityId;
+  } catch {
+    // Ignore corrupted state.
+  }
+}
+
+function clearUiState(): void {
+  try {
+    localStorage.removeItem(UI_STATE_KEY);
+  } catch {
+    // Nothing to clear.
+  }
 }
 
 function formatUtcTime(timestamp: string): string {
@@ -63,7 +105,7 @@ function formatUtcTime(timestamp: string): string {
 }
 
 async function loadSubscription(): Promise<Subscription> {
-  const response = await fetch("/api/subscription");
+  const response = await sessionFetch("/api/subscription");
   if (!response.ok) throw new Error("Unable to load subscription");
   const result = await response.json() as Subscription;
   subscription.value = result;
@@ -76,7 +118,7 @@ async function addLicenses(count: number): Promise<{
   previousLicenseCount: number;
   expectedLicenseCount: number;
 }> {
-  const response = await fetch("/api/licenses", {
+  const response = await sessionFetch("/api/licenses", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ count }),
@@ -98,7 +140,7 @@ interface FailedLicenseOperation {
 }
 
 async function removeLicenses(count: number): Promise<FailedLicenseOperation> {
-  const response = await fetch("/api/licenses/remove", {
+  const response = await sessionFetch("/api/licenses/remove", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ count }),
@@ -135,7 +177,7 @@ async function removeOneLicense(): Promise<void> {
 }
 
 async function requestUsageExport(): Promise<{ status: number; statusText: string }> {
-  const response = await fetch("/api/usage-export", { method: "POST" });
+  const response = await sessionFetch("/api/usage-export", { method: "POST" });
   return { status: response.status, statusText: response.statusText };
 }
 
@@ -143,7 +185,8 @@ async function resetDemo(): Promise<void> {
   clearNotifications();
   activity.value = [];
   latestIncidentId.value = "";
-  await fetch("/api/reset", { method: "POST" });
+  clearUiState();
+  await sessionFetch("/api/reset", { method: "POST" });
   await loadSubscription();
 }
 
@@ -221,8 +264,10 @@ async function registerBusinessTools(): Promise<boolean> {
 
 onMounted(async () => {
   recorder.start();
-  await loadSubscription();
-  const [reportRegistered, businessRegistered] = await Promise.all([
+  restoreUiState();
+  // Register tools before any network round-trip so an agent that reloads the page
+  // between steps finds them the moment the document exists.
+  const registrations = Promise.all([
     registerReportSiteIssue(recorder, registration.signal, {
       onStart: (input) => {
         addActivity("report_site_issue", input.summary, "report");
@@ -240,6 +285,8 @@ onMounted(async () => {
     }),
     registerBusinessTools(),
   ]);
+  void loadSubscription().catch(() => undefined);
+  const [reportRegistered, businessRegistered] = await registrations;
   webmcpAvailable.value = reportRegistered && businessRegistered;
 });
 

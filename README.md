@@ -31,7 +31,7 @@ The canonical agent is Codex in the ChatGPT desktop app's built-in browser. The 
 
 ## Implementation status
 
-The current reference implementation includes the browser agent, privacy sanitizer, WebMCP tools, Bun ingestion API, in-memory issue store, unified Vue application, investigation UI, focused Vitest coverage, and OpenTelemetry fetch/XHR instrumentation with a Resource Timing fallback and a 120-second flight recorder. Native OTLP/HTTP export, trace-header propagation, Web Vitals, and persistent storage remain planned work.
+The current reference implementation includes the browser agent, privacy sanitizer, WebMCP tools, Bun ingestion API, in-memory issue store scoped to anonymous sessions, unified Vue application, investigation UI, focused Vitest coverage, and OpenTelemetry fetch/XHR instrumentation with a Resource Timing fallback and a 120-second flight recorder. Native OTLP/HTTP export, trace-header propagation, Web Vitals, and persistent storage remain planned work.
 
 ## Privacy boundary
 

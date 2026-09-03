@@ -29,10 +29,10 @@ Sites with an existing OpenTelemetry provider can register `createTinCanInstrume
 
 ## Demo applications
 
-`apps/demo-saas` contains the product, developer harness, and admin routes in one Vue application. `apps/api` is the Bun reference server with in-memory subscription and issue state. Vite proxies `/api` and `/_tincan` to the API during local development.
+`apps/demo-saas` contains the product, developer harness, and admin routes in one Vue application. `apps/api` is the Bun reference server with in-memory subscription and issue state, partitioned by an anonymous session cookie. Vite proxies `/api` and `/_tincan` to the API during local development.
 
 The demo exposes `add_licenses`, `remove_licenses`, `get_subscription`, `export_usage_report`, and `report_site_issue`. Adding one license persists two; removing one returns HTTP `504` without changing state.
 
 ## Current boundaries
 
-The issue store is process memory only. Native OTLP/HTTP export, durable persistence, authentication, tenancy, Web Vitals, long-task collection, and backend trace correlation remain future work. Resource Timing fallback spans include URL path, timing, and Chromium response status, but cannot recover an HTTP method that was hidden by another JavaScript realm.
+The issue store is process memory only, scoped to an anonymous session with an idle expiry. Native OTLP/HTTP export, durable persistence, authentication, tenancy, Web Vitals, long-task collection, and backend trace correlation remain future work. Resource Timing fallback spans include URL path, timing, and Chromium response status, but cannot recover an HTTP method that was hidden by another JavaScript realm.

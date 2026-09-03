@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { IncidentPayload, OtelLogRecord, OtelMetric, OtelSpan } from "@tincan-webmcp/browser";
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import { sessionFetch } from "./session";
 
 interface StoredIncident extends IncidentPayload {
   id: string;
@@ -127,7 +128,7 @@ function metricValue(metric: OtelMetric): string {
 
 async function loadIssues(): Promise<void> {
   loading.value = true;
-  const response = await fetch("/api/issues");
+  const response = await sessionFetch("/api/issues");
   const body = await response.json() as { issues: StoredIncident[] };
   issues.value = body.issues;
   const routeIssueId = issueIdFromPath(currentPath.value);

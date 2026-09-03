@@ -1,9 +1,12 @@
 import {
+  DEFAULT_DIAGNOSTIC_WINDOW_MS,
   TinCanBrowserTelemetry,
   type TinCanFlightRecorderSpanProcessor,
 } from "@tincan-webmcp/otel-instrumentation";
+import { FlightRecorderStore, type FlightRecorderPersistenceOptions } from "./persistence";
 import { DiagnosticRingBuffer, type RingBufferOptions } from "./ring-buffer";
 import {
+  MAX_INCIDENT_BYTES,
   sanitizePath,
   sanitizeString,
   sanitizeValue,
@@ -21,6 +24,11 @@ export interface TinCanOptions extends RingBufferOptions {
   application: { name: string; version?: string; environment?: string };
   fetch?: typeof globalThis.fetch;
   spanProcessor?: TinCanFlightRecorderSpanProcessor;
+  /**
+   * Keep the sanitized recorder window in Web Storage so it survives a page reload,
+   * for example when a browser agent re-navigates between tool calls. Off by default.
+   */
+  persistence?: FlightRecorderPersistenceOptions | false;
 }
 
 type EventLevel = "info" | "warn" | "error";
@@ -43,14 +51,27 @@ export class TinCanRecorder {
   readonly #telemetry?: TinCanBrowserTelemetry;
   readonly #spanProcessor: TinCanFlightRecorderSpanProcessor;
   readonly #startedAt = new Date().toISOString();
+  readonly #maxAgeMs: number;
+  readonly #store?: FlightRecorderStore;
+  readonly #persistIntervalMs: number;
+  readonly #persistMaxBytes: number;
   #started = false;
   #consoleInstrumentation?: ConsoleInstrumentation;
   #onError?: (event: ErrorEvent) => void;
   #onRejection?: (event: PromiseRejectionEvent) => void;
+  #onPageHide?: () => void;
+  #onVisibilityChange?: () => void;
+  #persistTimer?: ReturnType<typeof setTimeout>;
+  #persistInterval?: ReturnType<typeof setInterval>;
 
   constructor(options: TinCanOptions) {
     this.#options = options;
     this.buffer = new DiagnosticRingBuffer(options);
+    this.#maxAgeMs = options.maxAgeMs ?? DEFAULT_DIAGNOSTIC_WINDOW_MS;
+    const persistence = options.persistence || undefined;
+    if (persistence) this.#store = new FlightRecorderStore(persistence);
+    this.#persistIntervalMs = persistence?.intervalMs ?? 3_000;
+    this.#persistMaxBytes = persistence?.maxBytes ?? MAX_INCIDENT_BYTES;
     if (options.spanProcessor) {
       this.#spanProcessor = options.spanProcessor;
     } else {
@@ -68,6 +89,7 @@ export class TinCanRecorder {
   start(): this {
     if (this.#started || typeof window === "undefined") return this;
     this.#started = true;
+    this.#restore();
     this.record("tincan.browser.navigation", location.pathname, { "url.path": location.pathname });
     this.#patchConsole();
     this.#telemetry?.start();
@@ -75,11 +97,14 @@ export class TinCanRecorder {
     this.#onRejection = (event) => this.record("tincan.browser.unhandled_rejection", String(event.reason), undefined, "error");
     window.addEventListener("error", this.#onError);
     window.addEventListener("unhandledrejection", this.#onRejection);
+    this.#watchPersistence();
     return this;
   }
 
   stop(): void {
     if (!this.#started || typeof window === "undefined") return;
+    this.#unwatchPersistence();
+    this.#persist();
     this.#consoleInstrumentation?.stop();
     this.#consoleInstrumentation = undefined;
     this.#telemetry?.stop();
@@ -98,6 +123,7 @@ export class TinCanRecorder {
       body: sanitizeString(body, 500),
       ...(attributes ? { attributes: sanitizeValue(attributes) as OtelAttributes } : {}),
     });
+    this.#schedulePersist();
   }
 
   async reportIssue(input: ReportSiteIssueInput): Promise<ReportResult> {
@@ -137,6 +163,51 @@ export class TinCanRecorder {
     });
     if (!response.ok) throw new Error(`TinCan report failed with ${response.status}`);
     return (await response.json()) as ReportResult;
+  }
+
+  #restore(): void {
+    if (!this.#store) return;
+    const now = Date.now();
+    const snapshot = this.#store.load(now, this.#maxAgeMs);
+    for (const event of snapshot.events) this.buffer.push(event, now);
+    this.#spanProcessor.restore?.(snapshot.spans, now);
+  }
+
+  #persist(): void {
+    if (!this.#store) return;
+    const now = Date.now();
+    this.#store.save({ events: this.buffer.snapshot(now), spans: this.#spanProcessor.snapshot(now) }, now, this.#persistMaxBytes);
+  }
+
+  #schedulePersist(): void {
+    if (!this.#store || !this.#started || this.#persistTimer !== undefined) return;
+    this.#persistTimer = setTimeout(() => {
+      this.#persistTimer = undefined;
+      this.#persist();
+    }, 250);
+  }
+
+  #watchPersistence(): void {
+    if (!this.#store) return;
+    this.#onPageHide = () => this.#persist();
+    this.#onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") this.#persist();
+    };
+    window.addEventListener("pagehide", this.#onPageHide);
+    document.addEventListener("visibilitychange", this.#onVisibilityChange);
+    // Spans end without going through record(), so also save on a short interval.
+    this.#persistInterval = setInterval(() => this.#persist(), this.#persistIntervalMs);
+  }
+
+  #unwatchPersistence(): void {
+    if (this.#persistTimer !== undefined) clearTimeout(this.#persistTimer);
+    if (this.#persistInterval !== undefined) clearInterval(this.#persistInterval);
+    this.#persistTimer = undefined;
+    this.#persistInterval = undefined;
+    if (this.#onPageHide) window.removeEventListener("pagehide", this.#onPageHide);
+    if (this.#onVisibilityChange) document.removeEventListener("visibilitychange", this.#onVisibilityChange);
+    this.#onPageHide = undefined;
+    this.#onVisibilityChange = undefined;
   }
 
   #patchConsole(): void {

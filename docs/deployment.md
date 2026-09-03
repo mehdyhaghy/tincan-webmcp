@@ -42,4 +42,4 @@ The firewall allows inbound SSH and 443 only. The API, and any future database o
 
 ## Demo-only security boundary
 
-The issue store is process memory and resets when the process restarts. The reference API intentionally has no accounts or tenant isolation. Deploy it only with synthetic demo data. Add authentication, authorization, durable storage, retention controls, and proxy-aware rate limiting before connecting TinCan to a real service.
+Demo state lives in process memory, partitioned by an anonymous `tincan_session` cookie (one hour idle expiry, header fallback `x-tincan-session`) so concurrent visitors, and a visitor whose page is reloaded between agent steps, keep their own subscription and issue list. It still resets when the process restarts. The session is a convenience, not an authentication boundary: the reference API intentionally has no accounts or tenant isolation. Deploy it only with synthetic demo data. Add authentication, authorization, durable storage, retention controls, and proxy-aware rate limiting before connecting TinCan to a real service.

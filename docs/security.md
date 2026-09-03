@@ -21,6 +21,8 @@ Network records contain method, sanitized path, response status, and duration. T
 - DOM text, HTML, or screenshots
 - Access tokens, refresh tokens, API keys, or private keys
 
+When persistence is enabled, the recorder writes its own already-sanitized window to a single `localStorage` key so evidence survives a page reload. It never reads any other key.
+
 ## Sanitization
 
 The browser sanitizer:

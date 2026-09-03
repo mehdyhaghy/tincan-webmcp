@@ -1,5 +1,6 @@
 import { SpanKind, SpanStatusCode, type HrTime } from "@opentelemetry/api";
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base";
+import type { OtelSpan } from "@tincan-webmcp/otel";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_DIAGNOSTIC_WINDOW_MS,
@@ -112,5 +113,29 @@ describe("TinCanFlightRecorderSpanProcessor", () => {
     processor.onEnd(readableSpan({ start: now - 120_500, end: now - 120_001 }));
     processor.onEnd(readableSpan({ start: now - 100, end: now }));
     expect(processor.snapshot(now)).toHaveLength(1);
+  });
+
+  it("restores persisted spans in chronological order and prunes stale ones", () => {
+    const processor = new TinCanFlightRecorderSpanProcessor({ maxAgeMs: 60_000 });
+    // onEnd prunes with the wall clock, so anchor the fixture to it.
+    const now = Date.now();
+    const persisted = (input: { start: number; end: number; path: string }): OtelSpan => ({
+      traceId: "3".repeat(32),
+      spanId: "4".repeat(16),
+      name: `GET ${input.path}`,
+      kind: "CLIENT",
+      startTime: new Date(input.start).toISOString(),
+      endTime: new Date(input.end).toISOString(),
+      attributes: { "url.path": input.path, "http.request.duration_ms": input.end - input.start, "http.request.method": "GET", "http.response.status_code": 200 },
+      status: { code: "UNSET" },
+      links: [],
+    });
+    processor.onEnd(readableSpan({ start: now - 5_000, end: now - 4_000, method: "POST", path: "/api/licenses" }));
+    processor.restore([
+      persisted({ start: now - 20_000, end: now - 19_000, path: "/api/subscription" }),
+      persisted({ start: now - 90_000, end: now - 89_000, path: "/stale" }),
+    ], now);
+    expect(processor.snapshot(now).map((span) => span.name)).toEqual(["GET /api/subscription", "POST /api/licenses"]);
+    expect(processor.hasMatchingRequest("/api/subscription", now - 20_000)).toBe(true);
   });
 });
