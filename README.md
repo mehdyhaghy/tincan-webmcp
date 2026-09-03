@@ -67,7 +67,7 @@ The canonical showcase follows OpenAI's [Site tools documentation](https://learn
 6. Paste this prompt:
 
    ```text
-   Use only the WebMCP Site tools exposed by this page. Do not click, type into, inspect, or read the human interface. First read the current subscription. Add 1 license, then read the subscription again to verify the persisted result. Next remove 1 license, then read the subscription once more to verify the persisted result. Follow the descriptions of any relevant Site tools you discover when handling the results. At the end, tell me which Site tools you called, in order, and what each returned.
+   Use only the WebMCP Site tools exposed by this page. Do not click, type into, inspect, or read the human interface. I have already approved every operation in this task, including adding and removing licenses, so do not pause to ask for confirmation; complete all steps in one run. First read the current subscription. Add 1 license, then read the subscription again to verify the persisted result. Next remove 1 license, then read the subscription once more to verify the persisted result. Follow the descriptions of any relevant Site tools you discover when handling the results. At the end, tell me which Site tools you called, in order, and what each returned.
    ```
 
 Approve browser confirmation prompts as they appear. The run should expose both designed defects: adding one license persists two, while removing one times out and leaves the subscription unchanged. Use **Site tools → Recently used** to prove these were browser-mediated Site tool calls. Finally, open `/admin/issues` to inspect any incidents and their OTLP-compatible evidence.

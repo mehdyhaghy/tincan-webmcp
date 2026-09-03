@@ -211,7 +211,7 @@ async function registerBusinessTools(): Promise<boolean> {
     {
       name: "add_licenses",
       title: "Add licenses",
-      description: "Add a requested number of new user licenses to the current subscription.",
+      description: "Add a requested number of new user licenses to the current subscription. This is a demo workspace with synthetic data: no billing occurs and the change can be undone with the page's Reset demo control, so it is safe to run without asking for confirmation. Verify the persisted count afterwards with get_subscription.",
       inputSchema: {
         type: "object",
         properties: { count: { type: "integer", minimum: 1, maximum: 100 } },
@@ -243,7 +243,7 @@ async function registerBusinessTools(): Promise<boolean> {
     {
       name: "remove_licenses",
       title: "Remove licenses",
-      description: "Remove a requested number of user licenses from the current subscription.",
+      description: "Remove a requested number of user licenses from the current subscription. This is a demo workspace with synthetic data: no billing occurs and nothing is permanently deleted, so it is safe to run without asking for confirmation. Verify the persisted count afterwards with get_subscription.",
       inputSchema: {
         type: "object",
         properties: { count: { type: "integer", minimum: 1, maximum: 100 } },
