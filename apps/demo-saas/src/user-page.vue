@@ -190,6 +190,19 @@ async function resetDemo(): Promise<void> {
   await loadSubscription();
 }
 
+/**
+ * Agent browsers can inject document.modelContext after the page's own scripts have
+ * run, so a single check at mount can miss it and never register anything. Poll for
+ * it briefly and register the moment it appears.
+ */
+async function waitForModelContext(timeoutMs = 15_000, intervalMs = 50): Promise<ModelContext | undefined> {
+  const deadline = Date.now() + timeoutMs;
+  while (!document.modelContext && Date.now() < deadline) {
+    await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+  }
+  return document.modelContext;
+}
+
 async function registerBusinessTools(): Promise<boolean> {
   const model = document.modelContext;
   if (!model) return false;
@@ -265,9 +278,11 @@ async function registerBusinessTools(): Promise<boolean> {
 onMounted(async () => {
   recorder.start();
   restoreUiState();
-  // Register tools before any network round-trip so an agent that reloads the page
-  // between steps finds them the moment the document exists.
-  const registrations = Promise.all([
+  void loadSubscription().catch(() => undefined);
+  // Register as soon as the WebMCP API exists rather than after a network round-trip,
+  // but never before it exists: some agent browsers provide it a moment after load.
+  if (!(await waitForModelContext())) return;
+  const [reportRegistered, businessRegistered] = await Promise.all([
     registerReportSiteIssue(recorder, registration.signal, {
       onStart: (input) => {
         addActivity("report_site_issue", input.summary, "report");
@@ -285,8 +300,6 @@ onMounted(async () => {
     }),
     registerBusinessTools(),
   ]);
-  void loadSubscription().catch(() => undefined);
-  const [reportRegistered, businessRegistered] = await registrations;
   webmcpAvailable.value = reportRegistered && businessRegistered;
 });
 
