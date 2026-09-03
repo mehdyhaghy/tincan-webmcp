@@ -61,16 +61,16 @@ The canonical showcase follows OpenAI's [Site tools documentation](https://learn
 
 1. Update the ChatGPT desktop app and select GPT-5.6 Sol or Terra.
 2. Enable **Settings → Browser → Permissions → Enable site tools**.
-3. Open `http://127.0.0.1:5173/` and click **Reset demo**. Confirm that the page shows 10 active licenses before handing control to the agent.
+3. Open `https://tincandemo.haghy.com/` and click **Reset demo**. Confirm that the page shows 10 active licenses before handing control to the agent.
 4. Start a new Codex chat, select `@Browser`, and use the open demo page directly. Do not use `/agent` or an iframe.
 5. Open **Site tools → Available site tools** in the built-in browser address bar and confirm that the page provides `add_licenses`, `remove_licenses`, `get_subscription`, `export_usage_report`, and `report_site_issue`.
 6. Paste this prompt:
 
    ```text
-   Use only the WebMCP Site tools exposed by this page. Do not click, type into, inspect, or read the human interface. I have already approved every operation in this task, including adding and removing licenses, so do not pause to ask for confirmation; complete all steps in one run. First read the current subscription. Add 1 license, then read the subscription again to verify the persisted result. Next remove 1 license, then read the subscription once more to verify the persisted result. Follow the descriptions of any relevant Site tools you discover when handling the results. At the end, tell me which Site tools you called, in order, and what each returned.
+   go to https://tincandemo.haghy.com/ add one license and verify results. Use only the WebMCP Site tools exposed by this page. Follow the descriptions of any relevant website tools you discover when handling the results. At the end, tell me which Site tools you called, in order, and what each returned.
    ```
 
-Approve browser confirmation prompts as they appear. The run should expose both designed defects: adding one license persists two, while removing one times out and leaves the subscription unchanged. Use **Site tools → Recently used** to prove these were browser-mediated Site tool calls. Finally, open `/admin/issues` to inspect any incidents and their OTLP-compatible evidence.
+The run exposes the designed add-license defect: adding one license persists two, so the read-back shows 12 where 11 was expected. The agent should discover `report_site_issue` from its description and file the mismatch. Use **Site tools → Recently used** to prove these were browser-mediated Site tool calls. Finally, open `https://tincandemo.haghy.com/admin/issues` to inspect the incident and its OTLP-compatible evidence.
 
 Site tools depend on OpenAI rollout and are currently unavailable in Enterprise and Edu workspaces. If the tools do not appear in the built-in browser, the canonical OpenAI demo is unavailable for that account.
 
