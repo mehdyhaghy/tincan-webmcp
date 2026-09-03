@@ -122,7 +122,7 @@ describe("TinCan API", () => {
     });
   });
 
-  it("issues an anonymous session cookie and isolates demo state per session", async () => {
+  it("isolates the subscription per session but shares reported issues with the admin view", async () => {
     const api = new TinCanApi();
     const alice = client(api);
     const bob = client(api);
@@ -134,13 +134,27 @@ describe("TinCan API", () => {
 
     await alice("/api/licenses", jsonInit({ count: 1 }));
     await alice("/_tincan/issues", jsonInit(incident()));
+    // Subscription is per-session.
     expect(await (await alice("/api/subscription")).json()).toMatchObject({ licenseCount: 12 });
     expect(await (await bob("/api/subscription")).json()).toMatchObject({ licenseCount: 10 });
-    expect(await (await bob("/api/issues")).json()).toEqual({ issues: [] });
+    // Reported issues are shared: the admin view in any session sees every incident.
+    expect(await (await bob("/api/issues")).json()).toMatchObject({ issues: [{ id: "INC-1042" }] });
 
+    // One visitor's reset clears only their subscription, not the shared issue store.
     await bob("/api/reset", { method: "POST" });
     expect(await (await alice("/api/subscription")).json()).toMatchObject({ licenseCount: 12 });
+    expect(await (await alice("/api/issues")).json()).toMatchObject({ issues: [{ id: "INC-1042" }] });
     expect(api.sessionCount).toBe(2);
+  });
+
+  it("shows an admin the incidents reported by other sessions", async () => {
+    const api = new TinCanApi();
+    const agent = client(api);
+    const admin = client(api);
+    await agent("/_tincan/issues", jsonInit(incident()));
+    await agent("/_tincan/issues", jsonInit(incident()));
+    const listed = await (await admin("/api/issues")).json() as { issues: Array<{ id: string }> };
+    expect(listed.issues.map((entry) => entry.id)).toEqual(["INC-1043", "INC-1042"]);
   });
 
   it("marks the cookie Secure when the request arrived over HTTPS", async () => {

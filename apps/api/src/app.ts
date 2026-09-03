@@ -13,7 +13,6 @@ interface Subscription {
 interface DemoSession {
   id: string;
   subscription: Subscription;
-  store: MemoryIssueStore;
   lastSeen: number;
 }
 
@@ -26,10 +25,12 @@ export interface TinCanApiOptions {
 }
 
 /**
- * Demo state is partitioned by an anonymous session so concurrent visitors, and a
- * single visitor whose page is reloaded between agent steps, keep their own
- * subscription and issue list. The cookie is the primary carrier; the header lets a
- * client that cannot keep cookies resume with an identifier it stored itself.
+ * The subscription is partitioned by an anonymous session so concurrent visitors, and a
+ * single visitor whose page is reloaded between agent steps, keep their own license
+ * count. The cookie is the primary carrier; the header lets a client that cannot keep
+ * cookies resume with an identifier it stored itself. Reported issues are deliberately
+ * NOT partitioned: the admin investigation UI is the site owner's view and must show
+ * every incident, whichever session reported it.
  */
 export const SESSION_COOKIE = "tincan_session";
 export const SESSION_HEADER = "x-tincan-session";
@@ -111,6 +112,8 @@ const newSessionId = (): string => crypto.randomUUID().replace(/-/g, "");
 
 export class TinCanApi {
   readonly #sessions = new Map<string, DemoSession>();
+  // Shared across all sessions so the admin/investigation UI sees every reported incident.
+  readonly #store = new MemoryIssueStore();
   readonly #recentReports = new Map<string, number[]>();
   readonly #now: () => number;
   readonly #rateLimitMax: number;
@@ -194,13 +197,14 @@ export class TinCanApi {
     }
 
     if (url.pathname === "/api/reset" && request.method === "POST") {
+      // Reset only the caller's own subscription. The shared issue store is left intact
+      // so one visitor's reset cannot erase incidents another visitor reported.
       session.subscription = initialSubscription();
-      session.store.clear();
       return json({ status: "reset" });
     }
 
     if (url.pathname === "/api/issues" && request.method === "GET") {
-      return json({ issues: session.store.list() });
+      return json({ issues: this.#store.list() });
     }
 
     if (url.pathname === "/_tincan/issues" && request.method === "POST") {
@@ -213,7 +217,7 @@ export class TinCanApi {
         return json({ error: `Incident exceeds ${MAX_INCIDENT_BYTES} bytes.` }, 413);
       }
       try {
-        const incident = session.store.create(JSON.parse(text));
+        const incident = this.#store.create(JSON.parse(text));
         return json({ status: "reported", incidentId: incident.id }, 201);
       } catch (error) {
         return json({ error: error instanceof Error ? error.message : "Invalid incident." }, 400);
@@ -234,7 +238,7 @@ export class TinCanApi {
     }
     if (!session) {
       this.#evictSessions(now);
-      session = { id, subscription: initialSubscription(), store: new MemoryIssueStore(), lastSeen: now };
+      session = { id, subscription: initialSubscription(), lastSeen: now };
     }
     session.lastSeen = now;
     // Re-insert so Map iteration order doubles as least-recently-used order.
