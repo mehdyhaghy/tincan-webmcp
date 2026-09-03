@@ -17,6 +17,7 @@ APP_DIR=/opt/tincan
 APP_USER=tincan
 APP_HOME=/var/lib/tincan
 BUN_VERSION=1.3.13
+NODE_MAJOR=22
 DEPLOY_DIR="$APP_DIR/deploy"
 
 if [[ $EUID -ne 0 ]]; then
@@ -39,6 +40,12 @@ fi
 log "Installing Bun $BUN_VERSION"
 if ! /usr/local/bin/bun --version 2>/dev/null | grep -qx "$BUN_VERSION"; then
   curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash -s "bun-v$BUN_VERSION"
+fi
+
+log "Installing Node.js $NODE_MAJOR for the build toolchain"
+if ! node --version 2>/dev/null | grep -q "^v$NODE_MAJOR\."; then
+  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
+  apt-get install -y -q nodejs
 fi
 
 log "Fetching source ($BRANCH)"

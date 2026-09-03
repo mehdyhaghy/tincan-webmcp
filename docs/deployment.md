@@ -26,7 +26,7 @@ Any host that can run Bun can use these build and start commands. No separate st
 
 The `deploy/` directory provisions a fresh Ubuntu 24.04 host that exposes the site on port 443 only:
 
-- `setup.sh` installs nginx, certbot, ufw, and Bun, clones the repository into `/opt/tincan`, builds it as the unprivileged `tincan` user, issues a Let's Encrypt certificate, and starts the services.
+- `setup.sh` installs nginx, certbot, ufw, Bun, and Node.js (tsc, vue-tsc, and vite need Node to build; Bun runs the API), clones the repository into `/opt/tincan`, builds it as the unprivileged `tincan` user, issues a Let's Encrypt certificate, and starts the services.
 - `tincan-api.service` runs the API on `127.0.0.1:8787` with `TRUST_PROXY=1`.
 - `nginx-site.conf` terminates TLS and proxies every request to the API. It has no port 80 server block.
 - `certbot-pre.sh` and `certbot-post.sh` open port 80 in ufw only for the duration of a renewal, then close it and reload nginx.
