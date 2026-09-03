@@ -118,7 +118,7 @@ See [docs/testing.md](docs/testing.md) for the complete manual, WebMCP, API, and
 - [WebMCP tools](docs/webmcp.md) — schemas, results, registration, and compatibility
 - [OpenTelemetry mapping](docs/opentelemetry.md) — logs, metrics, traces, and OTLP boundaries
 - [Security and privacy](docs/security.md) — trust boundary, sanitization, limits, and deployment warnings
-- [Deployment](docs/deployment.md) — single-process Bun deployment
+- [Deployment](docs/deployment.md) — single-process Bun deployment and the HTTPS host setup
 - [Contributing](CONTRIBUTING.md) — development workflow and pull-request expectations
 - [Contest specification](spec.md) — complete product and acceptance requirements
 
