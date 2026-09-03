@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Provision an Ubuntu 24.04 host to serve TinCan over HTTPS only.
+# Provision an Ubuntu LTS host (tested on 26.04) to serve TinCan over HTTPS only.
 #
 # Usage, as root on the host:
 #   DOMAIN=tincandemo.example.com bash setup.sh
@@ -17,7 +17,6 @@ APP_DIR=/opt/tincan
 APP_USER=tincan
 APP_HOME=/var/lib/tincan
 BUN_VERSION=1.3.13
-NODE_MAJOR=22
 DEPLOY_DIR="$APP_DIR/deploy"
 
 if [[ $EUID -ne 0 ]]; then
@@ -42,11 +41,21 @@ if ! /usr/local/bin/bun --version 2>/dev/null | grep -qx "$BUN_VERSION"; then
   curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash -s "bun-v$BUN_VERSION"
 fi
 
-log "Installing Node.js $NODE_MAJOR for the build toolchain"
-if ! node --version 2>/dev/null | grep -q "^v$NODE_MAJOR\."; then
-  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
-  apt-get install -y -q nodejs
+log "Installing the current Node.js LTS for the build toolchain"
+# tsc, vue-tsc, and vite need a real Node runtime to build; Bun only runs the API.
+node_version="$(curl -fsSL https://nodejs.org/dist/index.json \
+  | python3 -c 'import json, sys; print(next(r["version"] for r in json.load(sys.stdin) if r["lts"]))')"
+if [[ "$(node --version 2>/dev/null || true)" != "$node_version" ]]; then
+  case "$(uname -m)" in
+    x86_64) node_arch=x64 ;;
+    aarch64) node_arch=arm64 ;;
+    *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+  esac
+  curl -fsSL "https://nodejs.org/dist/${node_version}/node-${node_version}-linux-${node_arch}.tar.xz" \
+    | tar -xJ -C /usr/local --strip-components=1 \
+        --exclude='*/CHANGELOG.md' --exclude='*/LICENSE' --exclude='*/README.md'
 fi
+echo "node $(node --version)"
 
 log "Fetching source ($BRANCH)"
 if [[ -d "$APP_DIR/.git" ]]; then
