@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Provision an Ubuntu LTS host (tested on 26.04) to serve TinCan over HTTPS only.
+# Provision an Ubuntu LTS host (tested on 24.04) to serve TinCan over HTTPS only.
 #
 # Usage, as root on the host:
 #   DOMAIN=tincandemo.example.com bash setup.sh

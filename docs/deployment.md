@@ -24,7 +24,7 @@ Any host that can run Bun can use these build and start commands. No separate st
 
 ## Ubuntu host with nginx and Let's Encrypt
 
-The `deploy/` directory provisions a fresh Ubuntu LTS host (tested on 26.04) that exposes the site on port 443 only:
+The `deploy/` directory provisions a fresh Ubuntu LTS host (tested on 24.04) that exposes the site on port 443 only:
 
 - `setup.sh` installs nginx, certbot, ufw, the pinned Bun release, and the current Node.js LTS (tsc, vue-tsc, and vite need Node to build; Bun runs the API), clones the repository into `/opt/tincan`, builds it as the unprivileged `tincan` user, issues a Let's Encrypt certificate, and starts the services.
 - `tincan-api.service` runs the API on `127.0.0.1:8787` with `TRUST_PROXY=1`.
